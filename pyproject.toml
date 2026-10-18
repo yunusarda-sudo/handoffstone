@@ -21,7 +21,7 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-# Repository = "https://github.com/<owner>/handoffstone"  # set once hosted
+Repository = "https://github.com/yunusarda-sudo/handoffstone"
 
 [tool.setuptools]
 py-modules = ["handoffstone"]
