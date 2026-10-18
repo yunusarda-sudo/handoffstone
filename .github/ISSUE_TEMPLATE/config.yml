@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Architecture & design discussion (RFC)
+    url: https://github.com/<owner>/tallystone/discussions
+    about: Propose alternative architectures, integration approaches, or design ideas. Prefer Discussions over Issues for open-ended feedback.
