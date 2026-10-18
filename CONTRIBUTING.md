@@ -1,0 +1,41 @@
+# Contributing
+
+`tallystone` is a v0.1.0-alpha. The most valuable contributions right now are the ones
+that make the core **more useful and more honest**, not larger.
+
+## Ground rules
+
+- **Stdlib only in the core.** `tallystone.py` must keep zero third-party imports.
+  Network access, API keys, and external services are out of scope by design.
+- **Tests must keep their teeth.** `test_bench_tallystone.py` contains negative
+  controls so the metrics can't silently become blind (e.g. always 1.0). Do not
+  weaken or delete them. If you change a metric, keep a test proving it moves.
+- **Publish results even when we lose.** If a change or a new baseline reverses
+  a benchmark result, update README rather than tuning the benchmark.
+
+## Running the checks
+
+```bash
+python3 test_tallystone.py           # core: expects 41 passing
+python3 test_bench_tallystone.py     # benchmark: expects 25 passing
+python3 tallystone.py                # smoke test (throwaway store)
+python3 bench_tallystone.py          # equal-budget sweep
+python3 bench_tallystone.py --profile  # token profile
+```
+
+## High-value areas
+
+1. **Serialization slimming** — reduce per-decision token overhead so the
+   equal-budget curve moves left (the known weakness). Must not lose
+   supersession, rationale, or evidence provenance. The compact wire format
+   (`to_wire_json` / `from_wire_json`) is where this happens; keep its
+   round-trip, malformed-input, and cross-project-leakage tests green.
+2. **Real cross-client trials** — capture → handoff between two genuinely
+   different agent clients, and document what broke.
+3. **Schema review** — `schema/handoff.schema.json` should match
+   `ContextPackage.to_dict()` exactly (the canonical export, not the wire form).
+
+## Packaging note
+
+The core is a single module (`tallystone.py`). Keep it importable with no other
+files present.

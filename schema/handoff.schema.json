@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/tallystone/handoff.schema.json",
+  "title": "tallystone handoff package",
+  "description": "Portable, decision-aware context handoff package produced by ContextPackage.to_dict()/to_json().",
+  "type": "object",
+  "required": ["version", "decisions", "constraints"],
+  "properties": {
+    "version": { "type": "string", "description": "Schema/package version." },
+    "created_at": { "type": "string", "description": "ISO-8601 creation timestamp." },
+    "created_by": { "type": "string", "description": "Agent that produced the package." },
+    "project_context": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/project_context" }]
+    },
+    "decisions": { "type": "array", "items": { "$ref": "#/$defs/decision" } },
+    "constraints": { "type": "array", "items": { "$ref": "#/$defs/constraint" } },
+    "supersession_history": {
+      "type": "array",
+      "description": "Compact change history: what replaced what, and why.",
+      "items": { "$ref": "#/$defs/supersession" }
+    },
+    "working_state": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/working_state" }]
+    },
+    "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+    "open_questions": { "type": "array", "items": { "type": "string" } },
+    "uncertainty": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "status": {
+      "type": "string",
+      "enum": ["verified", "user_asserted", "agent_inferred", "unverified", "superseded"]
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "kind": { "type": "string", "enum": ["file", "commit", "test", "url", "memory"] },
+        "locator": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["kind", "locator"]
+    },
+    "project_context": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string" },
+        "project_scope": { "type": "string" },
+        "created_by": { "type": "string" },
+        "created_at": { "type": "string" },
+        "status": { "$ref": "#/$defs/status" },
+        "name": { "type": "string" },
+        "purpose": { "type": "string" },
+        "scope": { "type": "string" },
+        "tech_stack": { "type": "array", "items": { "type": "string" } },
+        "repositories": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["id", "title", "decision"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string" },
+        "project_scope": { "type": "string" },
+        "created_by": { "type": "string" },
+        "created_at": { "type": "string" },
+        "title": { "type": "string" },
+        "decision": { "type": "string" },
+        "rationale": { "type": "string" },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "option": { "type": "string" },
+              "reason_rejected": { "type": "string" }
+            }
+          }
+        },
+        "outcome": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "status": { "$ref": "#/$defs/status" },
+        "supersedes": { "type": "array", "items": { "type": "string" } },
+        "superseded_by": { "type": "array", "items": { "type": "string" } },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+      }
+    },
+    "constraint": {
+      "type": "object",
+      "required": ["id", "constraint"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string" },
+        "project_scope": { "type": "string" },
+        "created_by": { "type": "string" },
+        "created_at": { "type": "string" },
+        "constraint": { "type": "string" },
+        "category": { "type": "string" },
+        "severity": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+        "source": { "type": "string" },
+        "status": { "$ref": "#/$defs/status" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+      }
+    },
+    "supersession": {
+      "type": "object",
+      "required": ["decision_id", "supersedes"],
+      "properties": {
+        "decision_id": { "type": "string", "description": "The current (replacement) decision." },
+        "supersedes": { "type": "string", "description": "The older decision it replaces." },
+        "current_decision": { "type": "string" },
+        "previous_decision": { "type": "string" },
+        "change_reason": { "type": "string" },
+        "status": { "$ref": "#/$defs/status" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+      }
+    },
+    "working_state": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string" },
+        "project_scope": { "type": "string" },
+        "active_task": { "type": "string" },
+        "state": { "type": "string", "enum": ["not_started", "in_progress", "blocked", "completed", "abandoned"] },
+        "blockers": { "type": "array", "items": { "type": "string" } },
+        "next_action": { "type": "string" },
+        "progress": { "type": "object" },
+        "status": { "$ref": "#/$defs/status" }
+      }
+    }
+  }
+}
