@@ -20,6 +20,18 @@ It is **local-first and stdlib-only**: no network, no API keys, no servers, no
 database. State is plain JSONL under `~/.tallystone` (or `$TALLYSTONE_HOME`). Packages are
 portable JSON/Markdown.
 
+## Install
+
+No dependencies, Python 3.9+.
+
+```bash
+pip install .            # from a clone
+pip install tallystone   # once published (alpha)
+```
+
+Or copy the single `tallystone.py` file next to your code — the core is one
+stdlib-only module.
+
 ## Quick start
 
 ```bash

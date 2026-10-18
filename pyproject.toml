@@ -25,3 +25,6 @@ dependencies = []
 
 [tool.setuptools]
 py-modules = ["tallystone"]
+
+[tool.setuptools.data-files]
+"share/tallystone/schema" = ["schema/handoff.schema.json"]
