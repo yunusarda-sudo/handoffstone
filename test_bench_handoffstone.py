@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Tests for the tallystone benchmark.
+Tests for the handoffstone benchmark.
 
-The point of these tests is NOT to re-assert "tallystone wins" (that would be a
+The point of these tests is NOT to re-assert "handoffstone wins" (that would be a
 self-congratulatory green suite). It is to prove the benchmark has teeth:
 
   * the scenario is deterministic
@@ -16,16 +16,16 @@ negative-control tests would fail.
 
 import json
 
-import bench_tallystone as B
+import bench_handoffstone as B
 
 
 class TestBench:
     def setup_method(self):
         self.scenario = B.generate_scenario(seed=42, n_decisions=20, n_constraints=10, n_pending=5)
         self.records = B.build_records(self.scenario)
-        self.ts_compact = B.transport_tallystone(self.scenario, mode="compact")
-        self.ts_current = B.transport_tallystone(self.scenario, mode="current")
-        self.ts_audit = B.transport_tallystone(self.scenario, mode="audit")
+        self.ts_compact = B.transport_handoffstone(self.scenario, mode="compact")
+        self.ts_current = B.transport_handoffstone(self.scenario, mode="current")
+        self.ts_audit = B.transport_handoffstone(self.scenario, mode="audit")
         self.summary_terse = B.transport_chat_summary(self.scenario, summary_mode="terse")
         self.summary_verbose = B.transport_chat_summary(self.scenario, summary_mode="verbose")
         self.summary_history = B.transport_chat_summary(self.scenario, summary_mode="history")
@@ -121,7 +121,7 @@ class TestBench:
     # --------------------------------------------------------------- budget caps
     def test_cb_respects_budget(self):
         for budget in (2000, 4000, 8000):
-            text = B.transport_tallystone(self.scenario, mode="compact", budget=budget)
+            text = B.transport_handoffstone(self.scenario, mode="compact", budget=budget)
             assert len(text) // 4 <= budget
 
     def test_summary_respects_budget(self):
@@ -132,14 +132,14 @@ class TestBench:
 
     def test_fit_never_grows_package(self):
         full = B.build_context_package(self.scenario, self.records, mode="compact")
-        import tallystone as cb
+        import handoffstone as cb
         for budget in (1000, 3000, 6000, 12000):
             fitted = cb.fit_package_to_budget(full, budget)
             assert len(fitted.to_json()) <= len(full.to_json())
 
     def test_history_prioritized_under_tight_budget(self):
         # The product guarantee must survive a tight budget.
-        text = B.transport_tallystone(self.scenario, mode="compact", budget=1200)
+        text = B.transport_handoffstone(self.scenario, mode="compact", budget=1200)
         assert B.evaluate(self.scenario, text, self.records).change_history == 1.0
 
     # ------------------------------------------------- negative controls (teeth)
@@ -167,8 +167,8 @@ class TestBench:
     # -------------------------------------------------------------------- report
     def test_run_benchmark_shape_and_deltas(self):
         r = B.run_benchmark(seed=42, n_decisions=20, n_constraints=10, n_pending=5)
-        assert set(r["metrics"].keys()) == {"tallystone", "chat_summary"}
-        assert r["deltas_tallystone_minus_summary"]["critical_fact_preservation"] > 0
+        assert set(r["metrics"].keys()) == {"handoffstone", "chat_summary"}
+        assert r["deltas_handoffstone_minus_summary"]["critical_fact_preservation"] > 0
 
     def test_run_sweep_shape(self):
         r = B.run_sweep(seeds=[42, 7], budgets=[2000, 8000],
@@ -185,7 +185,7 @@ class TestBench:
 
     def test_token_tradeoff_is_real(self):
         r = B.run_benchmark(seed=42)
-        assert r["metrics"]["tallystone"]["tokens"] > r["metrics"]["chat_summary"]["tokens"]
+        assert r["metrics"]["handoffstone"]["tokens"] > r["metrics"]["chat_summary"]["tokens"]
 
 
 def run_all_tests():
@@ -194,7 +194,7 @@ def run_all_tests():
         ("Scenario deterministic", suite.test_scenario_is_deterministic),
         ("Scenario seed sensitivity", suite.test_scenario_seed_changes_output),
         ("Scenario shape", suite.test_scenario_shape),
-        ("tallystone transport is valid package", suite.test_cb_transport_is_valid_package),
+        ("handoffstone transport is valid package", suite.test_cb_transport_is_valid_package),
         ("Summary is not a package", suite.test_summary_transport_is_not_a_package),
         ("Decision recall kept by both", suite.test_decision_recall_kept_by_both),
         ("Rationale lost by terse summary", suite.test_rationale_lost_by_terse_summary),
@@ -205,7 +205,7 @@ def run_all_tests():
         ("Audit carries full records", suite.test_audit_carries_full_records),
         ("History summary is a real baseline", suite.test_history_summary_is_a_real_baseline),
         ("Evidence penalized by filtering", suite.test_evidence_provenance_penalized_by_filtering),
-        ("tallystone respects budget", suite.test_cb_respects_budget),
+        ("handoffstone respects budget", suite.test_cb_respects_budget),
         ("Summary respects budget", suite.test_summary_respects_budget),
         ("Fit never grows package", suite.test_fit_never_grows_package),
         ("History prioritized under tight budget", suite.test_history_prioritized_under_tight_budget),

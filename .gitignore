@@ -6,5 +6,5 @@ dist/
 .venv/
 venv/
 bench_results/
-.tallystone/
+.handoffstone/
 .pytest_cache/

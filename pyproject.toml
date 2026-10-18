@@ -3,13 +3,13 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tallystone"
+name = "handoffstone"
 version = "0.1.0a0"
 description = "Portable, verifiable, decision-aware context handoffs for AI agents."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "Apache-2.0" }
-authors = [{ name = "tallystone contributors" }]
+authors = [{ name = "handoffstone contributors" }]
 keywords = ["ai-agents", "context", "handoff", "memory", "mcp", "local-first"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -21,10 +21,10 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-# Repository = "https://github.com/<owner>/tallystone"  # set once hosted
+# Repository = "https://github.com/<owner>/handoffstone"  # set once hosted
 
 [tool.setuptools]
-py-modules = ["tallystone"]
+py-modules = ["handoffstone"]
 
 [tool.setuptools.data-files]
-"share/tallystone/schema" = ["schema/handoff.schema.json"]
+"share/handoffstone/schema" = ["schema/handoff.schema.json"]

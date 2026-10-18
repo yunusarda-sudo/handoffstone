@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/tallystone/handoff.schema.json",
-  "title": "tallystone handoff package",
+  "$id": "https://example.com/handoffstone/handoff.schema.json",
+  "title": "handoffstone handoff package",
   "description": "Portable, decision-aware context handoff package produced by ContextPackage.to_dict()/to_json().",
   "type": "object",
   "required": ["version", "decisions", "constraints"],

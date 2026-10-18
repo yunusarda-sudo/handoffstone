@@ -7,13 +7,13 @@ labels: help wanted, testing
 ## Why
 
 Current evidence comes from a single, scripted evaluation loop
-(`bench_tallystone.py`). Passing there does **not** prove a handoff survives a
+(`bench_handoffstone.py`). Passing there does **not** prove a handoff survives a
 real move between *different* agent clients — we should not generalize
 single-model results.
 
 ## Goal
 
-Demonstrate (or falsify) that a `tallystone` package exported by one agent
+Demonstrate (or falsify) that a `handoffstone` package exported by one agent
 client can be consumed by another with no loss of decisions, rationale,
 constraints, change history, or evidence provenance.
 
@@ -33,6 +33,6 @@ constraints, change history, or evidence provenance.
 ## How to run
 
 ```bash
-python3 tallystone.py        # smoke
-python3 test_tallystone.py   # core tests
+python3 handoffstone.py        # smoke
+python3 test_handoffstone.py   # core tests
 ```

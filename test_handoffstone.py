@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tests for tallystone — decision-aware context handoffs.
+Tests for handoffstone — decision-aware context handoffs.
 
 Tests cover:
 - Decision/rationale preservation
@@ -21,24 +21,24 @@ import tempfile
 import shutil
 from pathlib import Path
 
-import tallystone as cb
+import handoffstone as cb
 
 
-class TestTallystone:
-    """Test suite for tallystone functionality."""
+class TestHandoffstone:
+    """Test suite for handoffstone functionality."""
 
     def setup_method(self):
         """Set up test environment with isolated storage."""
-        self.test_dir = tempfile.mkdtemp(prefix="tallystone_test_")
-        self.original_dir = cb.TALLYSTONE_DIR
-        cb.TALLYSTONE_DIR = Path(self.test_dir)
+        self.test_dir = tempfile.mkdtemp(prefix="handoffstone_test_")
+        self.original_dir = cb.HANDOFFSTONE_DIR
+        cb.HANDOFFSTONE_DIR = Path(self.test_dir)
 
         self.scope = "test-project"
         self.agent = "test-agent"
 
     def teardown_method(self):
         """Clean up test environment."""
-        cb.TALLYSTONE_DIR = self.original_dir
+        cb.HANDOFFSTONE_DIR = self.original_dir
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     # =========================================================================
@@ -52,7 +52,7 @@ class TestTallystone:
             project_scope=self.scope,
             created_by=self.agent,
             name="Test Project",
-            purpose="Testing tallystone",
+            purpose="Testing handoffstone",
             scope=self.scope,
             tech_stack=["Python", "SQLite"],
             repositories=["/test/repo"],
@@ -777,7 +777,7 @@ class TestTallystone:
         )
 
         # Create new instance with same storage dir
-        cb.TALLYSTONE_DIR = Path(self.test_dir)
+        cb.HANDOFFSTONE_DIR = Path(self.test_dir)
         loaded = cb.load_records(self.scope, cb.RecordKind.DECISION_RECORD)
 
         assert len(loaded) == 1
@@ -811,14 +811,14 @@ class TestMVPVerticalSlice:
 
     def setup_method(self):
         self.test_dir = tempfile.mkdtemp(prefix="mvp_test_")
-        self.original_dir = cb.TALLYSTONE_DIR
-        cb.TALLYSTONE_DIR = Path(self.test_dir)
+        self.original_dir = cb.HANDOFFSTONE_DIR
+        cb.HANDOFFSTONE_DIR = Path(self.test_dir)
 
         self.scope = "mvp-test"
         self.agent = "source-agent"
 
     def teardown_method(self):
-        cb.TALLYSTONE_DIR = self.original_dir
+        cb.HANDOFFSTONE_DIR = self.original_dir
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def test_full_mvp_flow(self):
@@ -980,7 +980,7 @@ def run_all_tests():
     """Run all tests and report results."""
     import sys
 
-    test_suite = TestTallystone()
+    test_suite = TestHandoffstone()
     mvp_suite = TestMVPVerticalSlice()
 
     tests = [

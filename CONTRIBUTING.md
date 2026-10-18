@@ -1,13 +1,13 @@
 # Contributing
 
-`tallystone` is a v0.1.0-alpha. The most valuable contributions right now are the ones
+`handoffstone` is a v0.1.0-alpha. The most valuable contributions right now are the ones
 that make the core **more useful and more honest**, not larger.
 
 ## Ground rules
 
-- **Stdlib only in the core.** `tallystone.py` must keep zero third-party imports.
+- **Stdlib only in the core.** `handoffstone.py` must keep zero third-party imports.
   Network access, API keys, and external services are out of scope by design.
-- **Tests must keep their teeth.** `test_bench_tallystone.py` contains negative
+- **Tests must keep their teeth.** `test_bench_handoffstone.py` contains negative
   controls so the metrics can't silently become blind (e.g. always 1.0). Do not
   weaken or delete them. If you change a metric, keep a test proving it moves.
 - **Publish results even when we lose.** If a change or a new baseline reverses
@@ -16,11 +16,11 @@ that make the core **more useful and more honest**, not larger.
 ## Running the checks
 
 ```bash
-python3 test_tallystone.py           # core: expects 41 passing
-python3 test_bench_tallystone.py     # benchmark: expects 25 passing
-python3 tallystone.py                # smoke test (throwaway store)
-python3 bench_tallystone.py          # equal-budget sweep
-python3 bench_tallystone.py --profile  # token profile
+python3 test_handoffstone.py           # core: expects 41 passing
+python3 test_bench_handoffstone.py     # benchmark: expects 25 passing
+python3 handoffstone.py                # smoke test (throwaway store)
+python3 bench_handoffstone.py          # equal-budget sweep
+python3 bench_handoffstone.py --profile  # token profile
 ```
 
 ## High-value areas
@@ -37,5 +37,5 @@ python3 bench_tallystone.py --profile  # token profile
 
 ## Packaging note
 
-The core is a single module (`tallystone.py`). Keep it importable with no other
+The core is a single module (`handoffstone.py`). Keep it importable with no other
 files present.

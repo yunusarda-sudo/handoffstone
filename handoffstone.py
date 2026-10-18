@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-tallystone — Portable, verifiable, decision-aware context handoffs for AI agents.
+handoffstone — Portable, verifiable, decision-aware context handoffs for AI agents.
 
 Canonical context model, capture, handoff, and cross-client integration: move
 decisions, their rationale, the evidence they rest on, and how the work
@@ -8,7 +8,7 @@ changed hands between agents (ChatGPT, Claude, Codex, OpenCode, ...).
 
 Stdlib-only and local-first: no network, no API keys, no external services.
 
-The name: a *tallystone* is a marked stone used to keep count and mark a
+The name: a *handoffstone* is a marked stone used to keep count and mark a
 boundary — a durable, verifiable reference point for what was decided and the
 evidence it rests on.
 """
@@ -1166,15 +1166,15 @@ def detect_secrets(text: str) -> list[str]:
 
 
 # Storage for context records (local JSONL files).
-# Override the location with TALLYSTONE_HOME (default: ~/.tallystone).
-TALLYSTONE_HOME = os.environ.get("TALLYSTONE_HOME")
-TALLYSTONE_DIR = Path(TALLYSTONE_HOME).expanduser() if TALLYSTONE_HOME else Path(os.path.expanduser("~/.tallystone"))
+# Override the location with HANDOFFSTONE_HOME (default: ~/.handoffstone).
+HANDOFFSTONE_HOME = os.environ.get("HANDOFFSTONE_HOME")
+HANDOFFSTONE_DIR = Path(HANDOFFSTONE_HOME).expanduser() if HANDOFFSTONE_HOME else Path(os.path.expanduser("~/.handoffstone"))
 
 
 def get_context_store_path(scope: str) -> Path:
     """Get the storage path for a project scope."""
-    TALLYSTONE_DIR.mkdir(parents=True, mode=0o700, exist_ok=True)
-    return TALLYSTONE_DIR / f"{scope}.jsonl"
+    HANDOFFSTONE_DIR.mkdir(parents=True, mode=0o700, exist_ok=True)
+    return HANDOFFSTONE_DIR / f"{scope}.jsonl"
 
 
 def save_record(record: ContextRecord, scope: str = None) -> bool:
@@ -1637,7 +1637,7 @@ def create_manual_handoff_input(
     uncertainty: list[str] = None,
 ) -> ContextPackage:
     """Create a context package from manually provided input (for consumer chat users)."""
-    import tallystone as cb
+    import handoffstone as cb
 
     # Build project context (minimal)
     project_ctx = cb.get_latest_record(scope, cb.RecordKind.PROJECT_CONTEXT)
@@ -1703,21 +1703,21 @@ def create_manual_handoff_input(
 if __name__ == "__main__":
     import tempfile
 
-    # Run against a throwaway store — never touch the user's real ~/.tallystone.
-    TALLYSTONE_DIR = Path(tempfile.mkdtemp(prefix="tallystone_smoke_"))
-    scope = "tallystone-smoke"
+    # Run against a throwaway store — never touch the user's real ~/.handoffstone.
+    HANDOFFSTONE_DIR = Path(tempfile.mkdtemp(prefix="handoffstone_smoke_"))
+    scope = "handoffstone-smoke"
 
-    print("tallystone — Smoke Test")
+    print("handoffstone — Smoke Test")
     print("=" * 40)
 
     # Create a project context
     pc = create_record(
         RecordKind.PROJECT_CONTEXT,
         project_scope=scope,
-        created_by="tallystone",
-        name="tallystone-smoke",
+        created_by="handoffstone",
+        name="handoffstone-smoke",
         purpose="Self-test project",
-        scope="Smoke test for the tallystone handoff model",
+        scope="Smoke test for the handoffstone handoff model",
         tech_stack=["Python"],
         repositories=["."],
     )
@@ -1726,7 +1726,7 @@ if __name__ == "__main__":
     # Create a decision
     dr = capture_decision(
         project_scope=scope,
-        agent="tallystone",
+        agent="handoffstone",
         title="Use SQLite for the local store",
         decision="Use embedded SQLite for the local knowledge store instead of an external database",
         rationale="Zero external dependencies, low latency, stdlib-only, WAL-enabled for concurrency",
@@ -1743,7 +1743,7 @@ if __name__ == "__main__":
     # Create a constraint
     cr = capture_constraint(
         project_scope=scope,
-        agent="tallystone",
+        agent="handoffstone",
         constraint="Never store secrets, API keys, or tokens in memory — only record WHERE they live",
         category="security",
         severity="critical",
@@ -1755,7 +1755,7 @@ if __name__ == "__main__":
     # Create working state
     ws = capture_working_state(
         project_scope=scope,
-        agent="tallystone",
+        agent="handoffstone",
         active_task="Validate the portable handoff model",
         state="in_progress",
         blockers=["Need to design the canonical context model"],
@@ -1772,7 +1772,7 @@ if __name__ == "__main__":
         working_state=ws,
         open_questions=["How to handle real-time sync between agents?"],
         uncertainty=["Consumer chat interface integration approach"],
-        created_by="tallystone",
+        created_by="handoffstone",
     )
 
     # Test JSON export/import

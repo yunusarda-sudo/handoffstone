@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-tallystone Benchmark — prove (or disprove) that structured context handoff
+handoffstone Benchmark — prove (or disprove) that structured context handoff
 beats a naive chat summary for cross-agent continuity.
 
 This is a REPRODUCIBLE benchmark. Given a fixed seed it produces the identical
@@ -11,7 +11,7 @@ What it measures
 ----------------
 Transports carry the same project context from a "source" agent to a "target":
 
-  * TALLYSTONE — the structured handoff package produced by the tallystone core.
+  * HANDOFFSTONE — the structured handoff package produced by the handoffstone core.
     Three modes mirroring `--history`:
         - compact (DEFAULT): current decisions + compact change history
         - current: current decisions only, no change history
@@ -42,18 +42,18 @@ the SAME token budget (1000/2000/4000/8000/16000) across several seeds, so it
 answers "at equal budget, who loses fewer decisions?" — the honest question.
 `--single` reproduces the original two-transport report.
 
-The interesting story is NOT "tallystone scores 1.0" — it is *which* axes each transport
+The interesting story is NOT "handoffstone scores 1.0" — it is *which* axes each transport
 loses, and at what token cost. The benchmark is designed to be able to FAIL
-(see the negative-control tests in test_bench_tallystone.py).
+(see the negative-control tests in test_bench_handoffstone.py).
 
 Usage
 -----
-    python3 bench_tallystone.py                       # equal-budget sweep (default)
-    python3 bench_tallystone.py --budgets 2000,8000 --seeds 42,7,13
-    python3 bench_tallystone.py --single              # one comparison, 2 transports
-    python3 bench_tallystone.py --single --mode audit --summary-mode history
-    python3 bench_tallystone.py --single --with-llm   # optional real-model recall test
-    python3 bench_tallystone.py --json                # machine-readable output
+    python3 bench_handoffstone.py                       # equal-budget sweep (default)
+    python3 bench_handoffstone.py --budgets 2000,8000 --seeds 42,7,13
+    python3 bench_handoffstone.py --single              # one comparison, 2 transports
+    python3 bench_handoffstone.py --single --mode audit --summary-mode history
+    python3 bench_handoffstone.py --single --with-llm   # optional real-model recall test
+    python3 bench_handoffstone.py --json                # machine-readable output
 """
 
 from __future__ import annotations
@@ -71,7 +71,7 @@ import urllib.request
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 
-import tallystone as cb
+import handoffstone as cb
 
 
 # =============================================================================
@@ -284,7 +284,7 @@ def generate_scenario(
 # =============================================================================
 
 def build_records(scenario: Scenario, agent: str = "source-agent") -> list[cb.ContextRecord]:
-    """Materialize the scenario as canonical tallystone records (in memory)."""
+    """Materialize the scenario as canonical handoffstone records (in memory)."""
     records: list[cb.ContextRecord] = []
     p = scenario.project
     records.append(cb.create_record(
@@ -380,9 +380,9 @@ def build_context_package(scenario: Scenario, records: list[cb.ContextRecord],
     )
 
 
-def transport_tallystone(scenario: Scenario, mode: str = "compact",
+def transport_handoffstone(scenario: Scenario, mode: str = "compact",
                              budget: int | None = None, wire: str = "full") -> str:
-    """Return the tallystone transport text (the handoff JSON).
+    """Return the handoffstone transport text (the handoff JSON).
 
     wire="full"    — the canonical, indented, verbose-key export (to_json).
     wire="compact" — the compact wire encoding (to_wire_json): same facts, no
@@ -524,7 +524,7 @@ def evaluate(scenario: Scenario, transport_text: str, records: list[cb.ContextRe
     # transport preserves BOTH sides AND the shared structured signal (the common
     # tag) that lets an automated detector pair them. A flat summary keeps the
     # two statements but drops every tag, so the conflict is no longer machine-
-    # detectable. (The tallystone package also feeds cb.detect_conflicts; this metric
+    # detectable. (The handoffstone package also feeds cb.detect_conflicts; this metric
     # isolates the information the *transport* retained.)
     conflicts_detected = 0
     conflict_tag = "bench-conflict"
@@ -671,12 +671,12 @@ def run_benchmark(seed: int = 42, n_decisions: int = 20, n_constraints: int = 10
     records = build_records(scenario)
 
     transports = {
-        "tallystone": transport_tallystone(scenario, mode=mode),
+        "handoffstone": transport_handoffstone(scenario, mode=mode),
         "chat_summary": transport_chat_summary(scenario, summary_mode=summary_mode),
     }
     metrics = {name: evaluate(scenario, text, records) for name, text in transports.items()}
 
-    ts_m = metrics["tallystone"]
+    ts_m = metrics["handoffstone"]
     sm_m = metrics["chat_summary"]
     deltas = {k: round(getattr(ts_m, k) - getattr(sm_m, k), 4) for k, _ in _METRIC_ORDER}
 
@@ -698,16 +698,16 @@ def run_benchmark(seed: int = 42, n_decisions: int = 20, n_constraints: int = 10
             "planted_conflicts": len(scenario.planted_conflicts),
         },
         "metrics": {name: m.to_dict() for name, m in metrics.items()},
-        "deltas_tallystone_minus_summary": deltas,
+        "deltas_handoffstone_minus_summary": deltas,
     }
 
 
 def print_report(result: dict) -> None:
     meta, counts = result["meta"], result["counts"]
-    ts_m, sm_m = result["metrics"]["tallystone"], result["metrics"]["chat_summary"]
+    ts_m, sm_m = result["metrics"]["handoffstone"], result["metrics"]["chat_summary"]
 
     print("=" * 74)
-    print("  TALLYSTONE BENCHMARK  —  structured handoff vs. chat summary")
+    print("  HANDOFFSTONE BENCHMARK  —  structured handoff vs. chat summary")
     print("=" * 74)
     print(f"  seed={meta['seed']}  decisions={meta['n_decisions']} "
           f"(active {counts['active_decisions']}, superseded {counts['superseded_decisions']})")
@@ -715,12 +715,12 @@ def print_report(result: dict) -> None:
           f"planted_conflicts={counts['planted_conflicts']}")
     print(f"  summary_mode={meta['summary_mode']}  mode={meta['mode']}")
     print("-" * 74)
-    print(f"  {'Metric':<30}{'Tallystone':>13}{'ChatSummary':>13}{'Delta':>10}")
+    print(f"  {'Metric':<30}{'Handoffstone':>13}{'ChatSummary':>13}{'Delta':>10}")
     print("-" * 74)
     for key, label in _METRIC_ORDER:
         c, s = ts_m[key], sm_m[key]
         d = c - s
-        flag = "  <-- tallystone" if d > 0.0001 else ("  <-- summary" if d < -0.0001 else "")
+        flag = "  <-- handoffstone" if d > 0.0001 else ("  <-- summary" if d < -0.0001 else "")
         print(f"  {label:<30}{c:>13.3f}{s:>13.3f}{d:>+10.3f}{flag}")
     print("-" * 74)
     print(f"  {'Transport tokens':<30}{ts_m['tokens']:>13}{sm_m['tokens']:>13}"
@@ -729,7 +729,7 @@ def print_report(result: dict) -> None:
 
     better = [k for k, _ in _METRIC_ORDER if ts_m[k] - sm_m[k] > 0.0001]
     worse = [k for k, _ in _METRIC_ORDER if ts_m[k] - sm_m[k] < -0.0001]
-    print(f"  tallystone strictly better on {len(better)} metric(s); "
+    print(f"  handoffstone strictly better on {len(better)} metric(s); "
           f"worse on {len(worse)}.")
     if worse:
         print(f"  (summary wins: {', '.join(worse)})")
@@ -743,12 +743,12 @@ def print_report(result: dict) -> None:
 # `ts_*`      = full (indented, verbose-key) JSON  — the "before" encoding.
 # `ts_*_wire` = compact wire encoding               — the "after" encoding.
 METHODS = {
-    "ts_compact":       lambda sc, b: transport_tallystone(sc, mode="compact", budget=b),
-    "ts_audit":         lambda sc, b: transport_tallystone(sc, mode="audit", budget=b),
-    "ts_current":       lambda sc, b: transport_tallystone(sc, mode="current", budget=b),
-    "ts_compact_wire":  lambda sc, b: transport_tallystone(sc, mode="compact", budget=b, wire="compact"),
-    "ts_audit_wire":    lambda sc, b: transport_tallystone(sc, mode="audit", budget=b, wire="compact"),
-    "ts_current_wire":  lambda sc, b: transport_tallystone(sc, mode="current", budget=b, wire="compact"),
+    "ts_compact":       lambda sc, b: transport_handoffstone(sc, mode="compact", budget=b),
+    "ts_audit":         lambda sc, b: transport_handoffstone(sc, mode="audit", budget=b),
+    "ts_current":       lambda sc, b: transport_handoffstone(sc, mode="current", budget=b),
+    "ts_compact_wire":  lambda sc, b: transport_handoffstone(sc, mode="compact", budget=b, wire="compact"),
+    "ts_audit_wire":    lambda sc, b: transport_handoffstone(sc, mode="audit", budget=b, wire="compact"),
+    "ts_current_wire":  lambda sc, b: transport_handoffstone(sc, mode="current", budget=b, wire="compact"),
     "sum_terse":        lambda sc, b: transport_chat_summary(sc, "terse", budget=b),
     "sum_verbose":      lambda sc, b: transport_chat_summary(sc, "verbose", budget=b),
     "sum_history":      lambda sc, b: transport_chat_summary(sc, "history", budget=b),
@@ -835,7 +835,7 @@ def _grid(result: dict, axis: str, fmt: str = "{:.3f}") -> None:
 def print_sweep_report(result: dict) -> None:
     m = result["meta"]
     print("=" * (14 + 10 * len(result["budgets"]) + 2))
-    print("  EQUAL-BUDGET SWEEP  —  tallystone vs. rival summaries")
+    print("  EQUAL-BUDGET SWEEP  —  handoffstone vs. rival summaries")
     print("=" * (14 + 10 * len(result["budgets"]) + 2))
     print(f"  seeds={m['seeds']}")
     print(f"  budgets (tokens)={m['budgets']}   decisions={m['n_decisions']} "
@@ -932,7 +932,7 @@ def _csv_ints(s: str) -> list[int]:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="tallystone vs chat-summary benchmark")
+    ap = argparse.ArgumentParser(description="handoffstone vs chat-summary benchmark")
     ap.add_argument("--decisions", type=int, default=20)
     ap.add_argument("--constraints", type=int, default=10)
     ap.add_argument("--pending", type=int, default=5)
@@ -952,7 +952,7 @@ def main(argv=None) -> int:
     ap.add_argument("--json", action="store_true", help="print raw JSON result")
     ap.add_argument("--out", default="bench_results", help="dir for JSON result ('' disables)")
     ap.add_argument("--min-advantage", type=float, default=0.0,
-                    help="(--single) exit non-zero unless tallystone beats summary by this much")
+                    help="(--single) exit non-zero unless handoffstone beats summary by this much")
     ap.add_argument("--profile", action="store_true",
                     help="print the token profile (by field and encoding) and exit")
     ap.add_argument("--holdout", action="store_true",
@@ -975,11 +975,11 @@ def main(argv=None) -> int:
         if args.with_llm:
             scenario = generate_scenario(args.seed, args.decisions, args.constraints, args.pending)
             if llm_available():
-                ts_text = transport_tallystone(scenario, mode=args.mode)
+                ts_text = transport_handoffstone(scenario, mode=args.mode)
                 sm_text = transport_chat_summary(scenario, summary_mode=args.summary_mode)
                 result["llm"] = {
                     "model": args.llm_model,
-                    "tallystone": run_llm_eval(scenario, ts_text, args.llm_model),
+                    "handoffstone": run_llm_eval(scenario, ts_text, args.llm_model),
                     "chat_summary": run_llm_eval(scenario, sm_text, args.llm_model),
                 }
             else:
@@ -997,9 +997,9 @@ def main(argv=None) -> int:
                     print(f"\n  LLM recall test: ERROR ({llm['error']})")
                 else:
                     print(f"\n  LLM recall accuracy (model={llm['model']}): "
-                          f"ts={llm['tallystone'].get('accuracy'):.2f} "
+                          f"ts={llm['handoffstone'].get('accuracy'):.2f} "
                           f"summary={llm['chat_summary'].get('accuracy'):.2f}")
-        adv = result["deltas_tallystone_minus_summary"]["critical_fact_preservation"]
+        adv = result["deltas_handoffstone_minus_summary"]["critical_fact_preservation"]
         rc = 0 if adv >= args.min_advantage else 1
     elif args.holdout:
         methods = [m for m in args.methods.split(",") if m] or None

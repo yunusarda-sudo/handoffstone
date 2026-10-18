@@ -1,4 +1,4 @@
-# tallystone
+# handoffstone
 
 > Portable, verifiable, decision-aware context handoffs for AI agents.
 
@@ -6,7 +6,7 @@
 
 When work moves between agents (ChatGPT → Claude → Codex → OpenCode → ...), a
 chat summary loses the things that actually matter: *why* a decision was made,
-*what evidence* it rests on, and *how it changed*. `tallystone` is a small,
+*what evidence* it rests on, and *how it changed*. `handoffstone` is a small,
 dependency-free core for carrying that across the handoff:
 
 - **Decisions** with rationale and rejected alternatives
@@ -17,7 +17,7 @@ dependency-free core for carrying that across the handoff:
 - **Budget-aware packaging** — trim a package to a token budget
 
 It is **local-first and stdlib-only**: no network, no API keys, no servers, no
-database. State is plain JSONL under `~/.tallystone` (or `$TALLYSTONE_HOME`). Packages are
+database. State is plain JSONL under `~/.handoffstone` (or `$HANDOFFSTONE_HOME`). Packages are
 portable JSON/Markdown.
 
 ## Install
@@ -26,22 +26,22 @@ No dependencies, Python 3.9+.
 
 ```bash
 pip install .            # from a clone
-pip install tallystone   # once published (alpha)
+pip install handoffstone   # once published (alpha)
 ```
 
-Or copy the single `tallystone.py` file next to your code — the core is one
+Or copy the single `handoffstone.py` file next to your code — the core is one
 stdlib-only module.
 
 ## Quick start
 
 ```bash
-python3 tallystone.py            # smoke test (writes to a throwaway store)
-python3 test_tallystone.py       # core tests
-python3 test_bench_tallystone.py # benchmark tests (incl. negative controls)
+python3 handoffstone.py            # smoke test (writes to a throwaway store)
+python3 test_handoffstone.py       # core tests
+python3 test_bench_handoffstone.py # benchmark tests (incl. negative controls)
 ```
 
 ```python
-import tallystone as cb
+import handoffstone as cb
 
 cb.capture_decision(project_scope="proj", agent="chatgpt",
                     title="Use SQLite", decision="Use SQLite",
@@ -64,7 +64,7 @@ print(pkg.to_markdown())    # human-readable handoff
 
 ## Benchmark — and the result we lose
 
-A reproducible, offline benchmark (`bench_tallystone.py`) compares the structured
+A reproducible, offline benchmark (`bench_handoffstone.py`) compares the structured
 handoff against the baseline it must beat: a **history-aware chat summary**.
 Every method is greedily filled to the *same* token budget across five seeds.
 
@@ -82,11 +82,11 @@ rows are full JSON, the `ts_*_wire` rows use the compact wire encoding:
 | `sum_history` (strong baseline) | 0.47 | 0.71 | 0.71 | 0.71 | 0.71 |
 
 ```bash
-python3 bench_tallystone.py                      # equal-budget sweep (default)
-python3 bench_tallystone.py --budgets 2000,8000 --seeds 42,7,13
-python3 bench_tallystone.py --single             # one head-to-head report
-python3 bench_tallystone.py --profile            # where the tokens go
-python3 bench_tallystone.py --holdout            # unseen scenario shapes
+python3 bench_handoffstone.py                      # equal-budget sweep (default)
+python3 bench_handoffstone.py --budgets 2000,8000 --seeds 42,7,13
+python3 bench_handoffstone.py --single             # one head-to-head report
+python3 bench_handoffstone.py --profile            # where the tokens go
+python3 bench_handoffstone.py --holdout            # unseen scenario shapes
 ```
 
 **What this honestly says:**
@@ -130,7 +130,7 @@ information: no indentation, empty/default fields elided, keys shortened.
 Decoding is backward-compatible (a legacy full JSON still loads) and validated:
 round-trips are byte-deterministic, malformed/unknown-version input is rejected,
 and per-record ids, verification status, supersession links, and evidence
-provenance all survive. See `test_tallystone.py` for the round-trip, negative,
+provenance all survive. See `test_handoffstone.py` for the round-trip, negative,
 and cross-project-leakage tests.
 
 ## Why not an existing tool?
@@ -149,10 +149,10 @@ where this approach loses.
 
 ## Naming
 
-A *tallystone* is a marked stone used to keep count and mark a boundary — a
+A *handoffstone* is a marked stone used to keep count and mark a boundary — a
 durable, verifiable reference point. The name was chosen after a collision check:
 common single-word candidates (`baton`, `cairn`, `tessera`, `waystone`, ...) are
-all taken on PyPI and/or by adjacent AI-memory projects. `tallystone` is free on
+all taken on PyPI and/or by adjacent AI-memory projects. `handoffstone` is free on
 PyPI with no naming collision on GitHub.
 
 ## License
