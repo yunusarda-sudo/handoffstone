@@ -20,15 +20,52 @@ import os
 import re
 import uuid
 import copy
+import stat
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
 
+class HandoffstoneError(Exception):
+    """Base class for explicit validation and local-store failures."""
+
+
+class InvalidScopeError(HandoffstoneError, ValueError):
+    """A scope is unsafe or disagrees with the record being stored."""
+
+
+class VerificationError(HandoffstoneError, ValueError):
+    """A verified claim has no usable, explicitly attested evidence."""
+
+
+class UnsafeContentError(HandoffstoneError, ValueError):
+    """Recognized sensitive content would cross a record boundary."""
+
+
+class StoreError(HandoffstoneError):
+    """Base class for store failures; no record contents in error messages."""
+
+
+class StoreWriteError(StoreError):
+    """Writing, flushing or syncing a record failed; success is not implied."""
+
+
+class StoreUnavailableError(StoreError):
+    """The store could not be read (as distinct from an empty store)."""
+
+
+class StoreCorruptionError(StoreError):
+    """A JSONL record is malformed, unsafe, or belongs to another scope."""
+
+    def __init__(self, line_number: int):
+        self.line_number = line_number
+        super().__init__(f"Invalid context record at line {line_number}; store not loaded")
+
+
 class VerificationStatus(str, Enum):
     """Verification status of a context record."""
-    VERIFIED = "verified"           # Confirmed by user or test evidence
+    VERIFIED = "verified"           # Requires a usable, explicitly attested reference
     USER_ASSERTED = "user_asserted"  # User stated it, not independently verified
     AGENT_INFERRED = "agent_inferred"  # Agent inferred from context
     UNVERIFIED = "unverified"       # No verification attempted
@@ -56,6 +93,10 @@ class EvidenceReference:
     verified: bool = False
     captured_at: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
 
+    def __post_init__(self):
+        _validate_evidence(asdict(self))
+        _validate_payload(asdict(self))
+
 
 @dataclass
 class BaseRecord:
@@ -72,11 +113,15 @@ class BaseRecord:
     evidence: list[EvidenceReference] = field(default_factory=list)
     metadata: dict = field(default_factory=dict)
 
+    def __post_init__(self):
+        _validate_record_data(asdict(self))
+
     def to_dict(self) -> dict:
         d = asdict(self)
         d["kind"] = self.kind.value if isinstance(self.kind, RecordKind) else self.kind
         d["status"] = self.status.value if isinstance(self.status, VerificationStatus) else self.status
         d["evidence"] = [asdict(e) for e in self.evidence]
+        _validate_record_data(d)  # Recheck mutable records at the export boundary.
         return d
 
     @classmethod
@@ -426,6 +471,7 @@ def record_to_json(record: ContextRecord) -> str:
 def record_from_json(json_str: str) -> ContextRecord:
     """Deserialize a record from JSON."""
     data = json.loads(json_str)
+    _validate_payload(data)
     kind = RecordKind(data["kind"])
 
     # Use the appropriate from_dict method to properly convert enums
@@ -556,13 +602,16 @@ class ContextPackage:
     created_by: str = ""
     version: str = "1.0"
 
+    def __post_init__(self):
+        self.to_dict()
+
     def to_json(self) -> str:
         """Export as machine-verifiable JSON."""
         return json.dumps(self.to_dict(), ensure_ascii=False, indent=2)
 
     def to_dict(self) -> dict:
         """Export as dictionary for serialization."""
-        return {
+        data = {
             "version": self.version,
             "created_at": self.created_at,
             "created_by": self.created_by,
@@ -575,9 +624,12 @@ class ContextPackage:
             "open_questions": self.open_questions,
             "uncertainty": self.uncertainty,
         }
+        _validate_payload(data)
+        return data
 
     def to_markdown(self) -> str:
         """Export as human-readable Markdown."""
+        self.to_dict()  # Markdown must enforce the same boundary as JSON/wire.
         lines = [
             f"# Context Handoff Package",
             f"",
@@ -677,6 +729,7 @@ class ContextPackage:
     def from_json(cls, json_str: str) -> "ContextPackage":
         """Import from machine-verifiable JSON."""
         data = json.loads(json_str)
+        _validate_payload(data)
         return cls(
             project_context=ProjectContext.from_dict(data["project_context"]) if data.get("project_context") else None,
             decisions=[DecisionRecord.from_dict(d) for d in data.get("decisions", [])],
@@ -760,7 +813,7 @@ def _dec_evidence(d: dict) -> EvidenceReference:
         kind=d.get("k", ""),
         locator=d.get("l", ""),
         description=d.get("d", ""),
-        verified=bool(d.get("v", False)),
+        verified=d.get("v", False),
         captured_at=d.get("a", ""),
     )
 
@@ -957,6 +1010,7 @@ def _collect_child_evidence(pkg: "ContextPackage") -> list[EvidenceReference]:
 
 
 def _encode_package(pkg: "ContextPackage") -> dict:
+    pkg.to_dict()  # Includes nested snapshots/metadata and mutable evidence.
     out: dict = {"wv": WIRE_VERSION, "v": pkg.version,
                  "at": pkg.created_at, "cb": pkg.created_by}
     if pkg.project_context:
@@ -1001,6 +1055,7 @@ def _decode_package(data: dict) -> "ContextPackage":
         pkg.evidence = _collect_child_evidence(pkg)
     pkg.open_questions = list(data.get("oq", []))
     pkg.uncertainty = list(data.get("un", []))
+    pkg.to_dict()  # The decoder fills fields after construction; validate them too.
     return pkg
 
 
@@ -1028,6 +1083,7 @@ def package_from_wire_dict(data: dict) -> "ContextPackage":
     """
     if not isinstance(data, dict):
         raise ValueError("malformed wire package: top level must be an object")
+    _validate_payload(data)
     if "wv" in data:
         if not isinstance(data["wv"], int) or data["wv"] != WIRE_VERSION:
             raise ValueError(f"unsupported wire version: {data.get('wv')!r}")
@@ -1136,12 +1192,14 @@ def fit_package_to_budget(package: "ContextPackage", max_tokens: int,
 
 # Security: Secret/PII filtering
 SECRET_PATTERNS = [
-    re.compile(r"(?i)(api[_-]?key|secret|password|token|auth[_-]?key)\s*[:=]\s*[\w\-]{20,}"),
-    re.compile(r"(?i)bearer\s+[\w\-]{20,}"),
+    re.compile(r'''(?ix)\b(?:api[_-]?key|client[_-]?secret|secret|password|access[_-]?token|refresh[_-]?token|token|auth[_-]?key)\s*[:=]\s*(?!\[REDACTED\])(?:"[^"\n]+"|'[^'\n]+'|[^\s,;]+)'''),
+    re.compile(r"(?i)bearer\s+(?!\[REDACTED\])[^\s,;]+"),
     re.compile(r"sk-[\w\-]{20,}"),  # OpenAI-style keys
     re.compile(r"gh[pousr]_[A-Za-z0-9_]{20,}"),  # GitHub tokens
     re.compile(r"glpat-[\w\-]{20,}"),  # GitLab tokens
     re.compile(r"aws_[a-z]+_key\s*[:=]\s*[\w\/+]{20,}"),
+    re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
+    re.compile(r"-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----[\s\S]*?-----END (?:[A-Z]+ )?PRIVATE KEY-----"),
     re.compile(r"\b\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4}\b"),  # Credit card-ish
     re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"),  # Emails
 ]
@@ -1165,6 +1223,86 @@ def detect_secrets(text: str) -> list[str]:
     return found
 
 
+_SAFE_SCOPE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
+_EVIDENCE_KINDS = {"file", "commit", "test", "url", "conversation", "memory"}
+_RECORD_KINDS = {k.value for k in RecordKind if k != RecordKind.EVIDENCE_REFERENCE}
+_SENSITIVE_KEYS = {"apikey", "secret", "clientsecret", "password", "token",
+                   "authtoken", "authkey", "authorization", "accesstoken",
+                   "refreshtoken", "privatekey", "awssecretaccesskey"}
+
+
+def validate_scope(scope: str) -> str:
+    """Accept a portable single filename component; never reinterpret a path."""
+    if not isinstance(scope, str) or not _SAFE_SCOPE.fullmatch(scope):
+        raise InvalidScopeError("Scope must be 1-128 ASCII letters/digits/dot/underscore/hyphen, starting with a letter or digit")
+    return scope
+
+
+def _attested_evidence(data: dict) -> bool:
+    return (data.get("verified") is True
+            and isinstance(data.get("kind"), str)
+            and data.get("kind") in _EVIDENCE_KINDS
+            and all(isinstance(data.get(k), str) and data[k].strip()
+                    and data[k].strip() != "[REDACTED]" for k in ("id", "locator")))
+
+
+def _validate_evidence(data: dict) -> None:
+    if type(data.get("verified", False)) is not bool:
+        raise VerificationError("Evidence verified must be a boolean")
+    if data.get("verified") and not _attested_evidence(data):
+        raise VerificationError("Verified evidence requires an id, supported kind and non-empty locator")
+
+
+def _validate_claim(data: dict) -> None:
+    validate_scope(data.get("project_scope"))
+    if not isinstance(data.get("kind"), str) or data["kind"] not in _RECORD_KINDS:
+        raise ValueError("Unsupported context record kind")
+    if not isinstance(data.get("status"), str) or data["status"] not in {s.value for s in VerificationStatus}:
+        raise VerificationError("Unsupported record verification status")
+    for key in ("id", "created_at", "created_by"):
+        if not isinstance(data.get(key), str) or not data[key].strip():
+            raise ValueError("Record identity and provenance fields must be non-empty strings")
+    if data.get("status") == VerificationStatus.VERIFIED:
+        evidence = data.get("evidence", [])
+        if not isinstance(evidence, list) or not any(
+            isinstance(e, dict) and _attested_evidence(e) for e in evidence
+        ):
+            raise VerificationError("Verified records require at least one usable, explicitly attested evidence reference")
+    for evidence in data.get("evidence", []):
+        _validate_evidence(evidence)
+
+
+def _validate_payload(data: Any) -> None:
+    """Fail closed on recognized secrets anywhere, including keys and snapshots.
+
+    This is a bounded-pattern safety check, not a universal secret detector.
+    Rejection preserves safe legacy payloads byte-for-byte instead of silently
+    altering identifiers, evidence locators, or the meaning of a checkpoint.
+    """
+    if isinstance(data, str):
+        if detect_secrets(data):
+            raise UnsafeContentError("Recognized sensitive content must be removed or redacted before capture/export")
+    elif isinstance(data, dict):
+        if isinstance(data.get("kind"), str) and data["kind"] in _RECORD_KINDS:
+            _validate_claim(data)
+        if "locator" in data and "verified" in data:
+            _validate_evidence(data)
+        for key, value in data.items():
+            _validate_payload(key)
+            if isinstance(key, str) and re.sub(r"[-_\s]", "", key).lower() in _SENSITIVE_KEYS:
+                if value not in (None, "", "[REDACTED]"):
+                    raise UnsafeContentError("Sensitive metadata values must be removed or redacted before capture/export")
+            _validate_payload(value)
+    elif isinstance(data, (list, tuple)):
+        for value in data:
+            _validate_payload(value)
+
+
+def _validate_record_data(data: dict) -> None:
+    _validate_claim(data)
+    _validate_payload(data)
+
+
 # Storage for context records (local JSONL files).
 # Override the location with HANDOFFSTONE_HOME (default: ~/.handoffstone).
 HANDOFFSTONE_HOME = os.environ.get("HANDOFFSTONE_HOME")
@@ -1172,65 +1310,94 @@ HANDOFFSTONE_DIR = Path(HANDOFFSTONE_HOME).expanduser() if HANDOFFSTONE_HOME els
 
 
 def get_context_store_path(scope: str) -> Path:
-    """Resolve a project store without accepting traversal or symlink targets.
-
-    Scope is a filename component, not a filesystem path. Existing ordinary
-    scope names preserve their historical on-disk filename.
-    """
-    if (not isinstance(scope, str) or not scope or scope in {".", ".."}
-            or "/" in scope or "\\" in scope or "\x00" in scope):
-        raise ValueError("Project scope must be a non-empty filename component")
+    """Resolve a safe per-project store path without creating directories."""
+    validate_scope(scope)
     root = HANDOFFSTONE_DIR.expanduser().resolve()
-    root.mkdir(parents=True, mode=0o700, exist_ok=True)
     path = root / f"{scope}.jsonl"
     if path.is_symlink():
         raise ValueError("Refusing a symlink context store")
     return path
 
 
+def _open_store(path: Path, flags: int) -> int:
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    if nofollow is None:
+        raise OSError("Protected store access requires no-follow support")
+    return os.open(path, flags | nofollow | getattr(os, "O_NONBLOCK", 0), 0o600)
+
+
 def save_record(record: ContextRecord, scope: str = None) -> bool:
-    """Persist a record; new store files are private (0600 on POSIX)."""
-    scope = scope or record.project_scope
-    path = get_context_store_path(scope)
+    """Append and sync a safe record. Return True or raise; never return False.
+
+    Individual appends are not multi-record transactions or a concurrency API.
+    A write/sync failure may leave bytes on disk; callers must not assume retry
+    is idempotent. load_records refuses partial/corrupt stores.
+    """
+    scope = record.project_scope if scope is None else scope
+    validate_scope(scope)
+    if scope != record.project_scope:
+        raise InvalidScopeError("Storage scope must match record project_scope")
+    payload = record_to_json(record) + "\n"  # Validate before any filesystem writes.
     try:
-        flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND
-        flags |= getattr(os, "O_NOFOLLOW", 0)
-        fd = os.open(path, flags, 0o600)
+        path = get_context_store_path(scope)
+        HANDOFFSTONE_DIR.mkdir(parents=True, mode=0o700, exist_ok=True)
+        fd = _open_store(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT)
         with os.fdopen(fd, "a", encoding="utf-8") as f:
-            f.write(record_to_json(record) + "\n")
+            if not stat.S_ISREG(os.fstat(f.fileno()).st_mode):
+                raise OSError("Not a regular store file")
+            f.write(payload)
+            f.flush()
+            os.fsync(f.fileno())
         return True
-    except (OSError, ValueError):
-        return False
+    except (OSError, UnicodeError, ValueError):
+        raise StoreWriteError("Context record could not be durably written; persistence is unconfirmed") from None
 
 
 def load_records(scope: str, kind: RecordKind = None) -> list[ContextRecord]:
-    """Load context records from local storage (latest version per ID)."""
-    if scope == "":
-        return []  # preserve the existing empty-scope isolation behavior
-    path = get_context_store_path(scope)
-    if not path.exists():
-        return []
+    """Load a complete valid store, or raise corruption/unavailability errors.
 
+    A missing file or valid empty file returns []; malformed lines are never
+    skipped, even when filtering for another kind. Existing files are not edited.
+    """
+    if scope == "":
+        return []  # Preserve the existing no-scope isolation behavior.
+    validate_scope(scope)
+    try:
+        path = get_context_store_path(scope)
+    except ValueError:
+        raise StoreUnavailableError("Context store could not be opened") from None
     records_by_id = {}
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
+        fd = _open_store(path, os.O_RDONLY)
+    except FileNotFoundError:
+        return []
+    except OSError:
+        raise StoreUnavailableError("Context store could not be opened") from None
+    line_number = 1
+    try:
+        with os.fdopen(fd, "r", encoding="utf-8") as f:
+            if not stat.S_ISREG(os.fstat(f.fileno()).st_mode):
+                raise OSError("Not a regular store file")
+            for line_number, line in enumerate(f, 1):
                 line = line.strip()
                 if not line:
                     continue
                 try:
-                    data = json.loads(line)
-                    if kind and data.get("kind") != kind.value:
-                        continue
                     record = record_from_json(line)
+                    if record.project_scope != scope:
+                        raise InvalidScopeError("Record scope mismatch")
+                    if kind and record.kind != kind:
+                        continue
                     record_id = record.id
                     # Keep the latest version (by created_at)
                     if record_id not in records_by_id or record.created_at > records_by_id[record_id].created_at:
                         records_by_id[record_id] = record
-                except Exception:
-                    continue
-    except Exception:
-        pass
+                except (ValueError, TypeError, KeyError, AttributeError, RecursionError):
+                    raise StoreCorruptionError(line_number) from None
+    except UnicodeError:
+        raise StoreCorruptionError(line_number) from None
+    except OSError:
+        raise StoreUnavailableError("Context store could not be read completely") from None
     return list(records_by_id.values())
 
 
@@ -1752,7 +1919,7 @@ if __name__ == "__main__":
         ],
         outcome="accepted",
         tags=["architecture", "storage"],
-        status=VerificationStatus.VERIFIED,
+        status=VerificationStatus.USER_ASSERTED,
     )
     print(f"Created DecisionRecord: {dr.id}")
 
@@ -1764,7 +1931,7 @@ if __name__ == "__main__":
         category="security",
         severity="critical",
         source="architecture_decision",
-        status=VerificationStatus.VERIFIED,
+        status=VerificationStatus.USER_ASSERTED,
     )
     print(f"Created ConstraintRecord: {cr.id}")
 

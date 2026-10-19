@@ -323,7 +323,7 @@ def build_records(scenario: Scenario, agent: str = "source-agent") -> list[cb.Co
             cb.RecordKind.CONSTRAINT_RECORD, project_scope=scenario.scope, created_by=agent,
             constraint=c["constraint"], category=c["category"],
             severity=c["severity"], source=c["source"],
-            status=cb.VerificationStatus.VERIFIED,
+            status=cb.VerificationStatus.USER_ASSERTED,  # Fixture has no evidence.
         ))
 
     records.append(cb.create_record(
