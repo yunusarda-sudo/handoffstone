@@ -70,16 +70,18 @@ configuration modifications were performed here.
 4. **Secrets:** The bridge scans nested incoming/outgoing data using P0's
    `detect_secrets`; the local P0 core must still reject unsafe records on
    persistence. Regex scans cannot guarantee detection of every secret.
-5. **JSONL atomicity gap:** A call that captures multiple decisions and then a
-   checkpoint makes multiple writes. If it fails between writes, partial
-   records may remain. The response reports failure, but **full atomicity and
-   rollback are not implemented**. Do not trust a partial M4 run as an accepted
-   transaction without a committed checkpoint anchor.
-6. **Concurrency gap:** No record-level atomicity or multi-process writer
-   locking is supplied by this bridge. Use single-writer pilot only.
-7. **Uncommitted changes:** HEAD/branch binding does not fully detect changed
-   working-tree contents at unchanged HEAD. Add a worktree manifest/diff hash
-   before relying on unfinished code state.
+5. **JSONL atomicity (M4.1 update):** `context_checkpoint` now writes every
+   record of one call (decisions + superseded counterparts + checkpoint) as a
+   single atomic swap (`write-then-rename`, fsync on file and directory). A
+   failure before the swap leaves the store byte-identical and reports
+   `write_failed_atomic_no_partial`; partial multi-record state cannot occur.
+   Superseded records are rewritten inside the same batch with a bumped
+   `created_at` so deduplication keeps the updated version.
+6. **Concurrency gap:** No multi-process writer locking is supplied by this
+   bridge. The atomic swap is single-writer only; use single-writer pilot.
+7. **Uncommitted changes (M4.1 update):** Closed. Resolved via
+   `git status --porcelain -uall` digest; a dirty tree blocks reassembly with
+   `worktree_changed` and the digest is persisted in the checkpoint.
 8. **Budget:** `fit_package_to_budget` is an approximate token estimator,
    not measured model-token accounting. Non-included decisions are counted.
 9. **Trust boundary:** MCP content is data, not instructions. The bridge does

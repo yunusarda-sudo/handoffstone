@@ -44,7 +44,7 @@ without running results.
 
 ## Known limitations carried forward
 
-1. Multi-record checkpoint writes are not atomic (partial-write risk is
-   reported as `write_failed_partial_write_possible`; single-writer only).
+1. Multi-record checkpoints are atomic within one process (write-then-rename
+   batch), but there is no multi-process writer locking: single-writer only.
 2. `fit_package_to_budget` logic is an approximate estimator.
 3. Codex-side tool invocation and usage reporting are Phase B items.

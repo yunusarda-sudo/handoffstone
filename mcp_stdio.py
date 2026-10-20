@@ -229,6 +229,60 @@ def _assemble(args: dict):
             "context": trimmed.to_dict()}, trimmed
 
 
+def _atomic_write_records(scope: str, records: list) -> str:
+    """All records of one tool call land in a single atomic store swap.
+
+    Serializes through the core's own validation (create_record/record_to_json),
+    then writes the complete new store (existing bytes + new lines) to a temp
+    file, fsyncs and os.replace()s the scope store. A failure before the swap
+    leaves the original store byte-identical: no partial multi-record state.
+    Single-writer only (no cross-process locking); concurrency stays a gap.
+    """
+    import stat as stat_module
+    store_dir = hs.HANDOFFSTONE_DIR
+    path = hs.get_context_store_path(scope)
+    payload = "".join(hs.record_to_json(r) + "\n" for r in records)
+    if os.environ.get("MCP_FAIL_ATOMIC"):
+        raise ToolFault("write_failed_atomic_no_partial")
+    store_dir.mkdir(parents=True, mode=0o700, exist_ok=True)
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | (nofollow or 0)
+    existing = b""
+    try:
+        fd = os.open(path, os.O_RDONLY | (nofollow or 0))
+        try:
+            if not stat_module.S_ISREG(os.fstat(fd).st_mode):
+                raise OSError("store is not a regular file")
+            existing = os.read(fd, os.fstat(fd).st_size)
+        finally:
+            os.close(fd)
+    except FileNotFoundError:
+        pass
+    except OSError:
+        raise ToolFault("store_unavailable") from None
+    tmp = path.with_name(path.name + ".tmp-atomic")
+    try:
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | (nofollow or 0), 0o600)
+        with os.fdopen(fd, "wb") as f:
+            f.write(existing)
+            f.write(payload.encode("utf-8"))
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+        dir_fd = os.open(store_dir, os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+    except OSError:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise ToolFault("write_failed_atomic_no_partial") from None
+    return str(path)
+
+
 def _checkpoint(args: dict) -> dict:
     scope, repo = _scope(args.get("project_scope")), _repo(args.get("repo_path"))
     agent = _string(args, "agent")
@@ -242,14 +296,19 @@ def _checkpoint(args: dict) -> dict:
         if field not in snap or not isinstance(snap[field], str):
             raise ToolFault("invalid_snapshot_" + field)
     evidence = _evidence(args.get("evidence", []), repo)
-    # Optional decision capture. Not transactionally atomic with checkpoint;
-    # failure must report a partial-write risk, never success.
     decisions = args.get("decisions", [])
     if not isinstance(decisions, list) or len(decisions) > 20:
         raise ToolFault("invalid_decisions")
-    for d in decisions:
+    for i, d in enumerate(decisions):
+        # Models often emit nested JSON as strings; accept that once.
+        if isinstance(d, str):
+            try:
+                d = json.loads(d)
+            except (ValueError, TypeError):
+                raise ToolFault("invalid_decisions") from None
         if not isinstance(d, dict):
             raise ToolFault("invalid_decisions")
+        decisions[i] = d
         _string(d, "title"); _string(d, "decision"); _string(d, "rationale")
         if d.get("status", "agent_inferred") not in {"agent_inferred", "user_asserted", "verified"}:
             raise ToolFault("invalid_verification_status")
@@ -262,7 +321,9 @@ def _checkpoint(args: dict) -> dict:
             raise ToolFault("invalid_supersedes")
     # A scope already tied to another repository/branch cannot be reused.
     # Without this check a newer checkpoint could expose an older repo's decisions.
-    for existing in _load(scope):
+    rows = _load(scope)
+    by_id = {r.id: r for r in rows}
+    for existing in rows:
         if existing.kind == hs.RecordKind.CONTEXT_CHECKPOINT:
             bound = existing.snapshot.get("_handoffstone_repo") if isinstance(existing.snapshot, dict) else None
             if not isinstance(bound, dict) or bound.get("root") != repo["root"] or bound.get("branch") != repo["branch"]:
@@ -273,23 +334,43 @@ def _checkpoint(args: dict) -> dict:
     s = copy.deepcopy(snap)
     s["_handoffstone_repo"] = repo
     _guard_data(s)
-    new_ids = []
+    batch, new_ids = [], []
     try:
         for d in decisions:
-            record = hs.capture_decision(
-                project_scope=scope, agent=agent, title=d["title"],
-                decision=d["decision"], rationale=d["rationale"],
-                evidence_refs=evidence,
+            record = hs.create_record(
+                hs.RecordKind.DECISION_RECORD,
+                project_scope=scope, created_by=agent,
+                title=d["title"], decision=d["decision"], rationale=d["rationale"],
+                evidence=evidence,
                 status=hs.VerificationStatus(d.get("status", "agent_inferred")),
                 supersedes=d.get("supersedes", []))
+            batch.append(record)
             new_ids.append(record.id)
-        rec = hs.create_checkpoint(
-            project_scope=scope, agent=agent, label=label,
-            snapshot=s, parent_checkpoint=args.get("parent_checkpoint", ""),
-            evidence_refs=evidence)
+            # The superseded counterparts are updated inside the same batch.
+            for old_id in d.get("supersedes", []):
+                old = by_id.get(old_id)
+                if old is None:
+                    raise ToolFault("invalid_supersedes")
+                if record.id not in old.superseded_by:
+                    old.superseded_by.append(record.id)
+                old.status = hs.VerificationStatus.SUPERSEDED
+                # load_records keeps the latest version by created_at; bump so
+                # the updated line wins deduplication, like the core does.
+                import datetime as dt
+                old.created_at = dt.datetime.now(dt.timezone.utc).isoformat()
+                batch.append(old)
+        batch.append(hs.create_record(
+            hs.RecordKind.CONTEXT_CHECKPOINT,
+            project_scope=scope, created_by=agent,
+            label=label, snapshot=s,
+            parent_checkpoint=args.get("parent_checkpoint", ""),
+            evidence=evidence))
+        _atomic_write_records(scope, batch)
+    except ToolFault:
+        raise
     except Exception as exc:
-        raise ToolFault("write_failed_partial_write_possible") from exc
-    return {"written": True, "scope": scope, "checkpoint_id": rec.id,
+        raise ToolFault("write_failed_atomic_no_partial") from exc
+    return {"written": True, "scope": scope, "checkpoint_id": batch[-1].id,
             "decision_ids": new_ids, "evidence_verified": sum(e.verified for e in evidence)}
 
 

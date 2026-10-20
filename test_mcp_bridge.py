@@ -88,6 +88,13 @@ def create_checkpoint(project_scope,agent,label,snapshot,parent_checkpoint='',ev
 def create_handoff(project_scope,source_agent,target_agent,task_summary,package,evidence_refs=None):
     r=mk(RecordKind.HANDOFF_RECORD,project_scope,source_agent,source_agent=source_agent,target_agent=target_agent,task_summary=task_summary,package=package.to_dict())
     save_record(r); return r
+def get_context_store_path(scope):
+    return HANDOFFSTONE_DIR/(scope+'.jsonl')
+def record_to_json(r):
+    return json.dumps(r.to_dict(),separators=(',',':'))
+def create_record(kind,project_scope,created_by,**kw):
+    kw.setdefault('superseded_by',[])
+    return mk(kind,project_scope,created_by,**kw)
 def build_supersession_history(decisions):
     return [{'supersedes':old.id,'successor':new.id} for old in decisions for new in decisions if old.id in getattr(new,'supersedes',[])]
 class ContextPackage:
@@ -277,13 +284,27 @@ class BridgeContract(unittest.TestCase):
         self.assertTrue(err)
         self.assertEqual(result["code"],"unsafe_content_rejected")
 
-    def test_write_failure_visible(self):
-        env=dict(self.env, STUB_FAIL_WRITE="1")
-        err,result=self.call("context_checkpoint",{"project_scope":"p1", "repo_path":str(self.repo),
-                      "agent":"fake", "label":"fail",
-                      "snapshot":{"active_task":"repair", "next_action":"retry"}},env=env)
+    def test_write_failure_visible_and_atomic(self):
+        # Atomic batch writer: a mid-transaction failure must leave the store
+        # byte-identical (no partial multi-record state).
+        env = dict(self.env, MCP_FAIL_ATOMIC="1")
+        err, result = self.call("context_checkpoint", {"project_scope": "p1", "repo_path": str(self.repo),
+                       "agent": "fake", "label": "fail",
+                       "snapshot": {"active_task": "repair", "next_action": "retry"}}, env=env)
         self.assertTrue(err)
-        self.assertEqual(result["code"],"write_failed_partial_write_possible")
+        self.assertEqual(result["code"], "write_failed_atomic_no_partial")
+        self.assertFalse((self.store / "p1.jsonl").exists())
+
+    def test_store_bytes_identical_after_failed_batch(self):
+        self.assertFalse(self.checkpoint()[0])
+        before = (self.store / "p1.jsonl").read_bytes()
+        env = dict(self.env, MCP_FAIL_ATOMIC="1")
+        err, _ = self.call("context_checkpoint", {"project_scope": "p1", "repo_path": str(self.repo),
+                          "agent": "fake", "label": "fail",
+                          "snapshot": {"active_task": "repair", "next_action": "retry"},
+                          "decisions": [{"title": "X", "decision": "Y", "rationale": "Z"}]}, env=env)
+        self.assertTrue(err)
+        self.assertEqual((self.store / "p1.jsonl").read_bytes(), before)
 
     def test_handoff_persists(self):
         self.assertFalse(self.checkpoint()[0])
