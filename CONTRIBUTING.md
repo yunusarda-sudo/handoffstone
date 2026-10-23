@@ -17,11 +17,16 @@ that make the core **more useful and more honest**, not larger.
 
 ```bash
 python3 test_handoffstone.py           # core: expects 41 passing
+python3 test_storage_security.py       # local store hardening
+python3 test_cross_client_fidelity.py  # producer/consumer transport gate
 python3 test_bench_handoffstone.py     # benchmark: expects 25 passing
 python3 handoffstone.py                # smoke test (throwaway store)
 python3 bench_handoffstone.py          # equal-budget sweep
 python3 bench_handoffstone.py --profile  # token profile
 ```
+
+Live Claude Code ↔ Codex trials follow
+[docs/cross-client-trial.md](docs/cross-client-trial.md).
 
 ## High-value areas
 

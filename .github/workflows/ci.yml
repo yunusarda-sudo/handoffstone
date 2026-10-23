@@ -33,6 +33,9 @@ jobs:
       - name: Storage security regressions
         run: python test_storage_security.py
 
+      - name: Cross-client transport fidelity
+        run: python test_cross_client_fidelity.py
+
       - name: Benchmark and negative controls
         run: python test_bench_handoffstone.py
 

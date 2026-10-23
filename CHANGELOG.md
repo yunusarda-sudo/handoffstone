@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [PEP 440](https://peps.python.org/pep-0440/) versioning.
 
+## [Unreleased]
+
+### Added
+
+- Cross-client transport fidelity tests and a documented live-trial protocol
+  (`test_cross_client_fidelity.py`, `docs/cross-client-trial.md`).
+- Fixture export helper `scripts/export_cross_client_fixture.py` for producer →
+  consumer product trials.
+
 ## [0.1.0a0] - 2026-10-23
 
 First public alpha. Portable, stdlib-only context handoffs for AI agents.

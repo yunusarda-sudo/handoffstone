@@ -156,7 +156,8 @@ where this approach loses.
 - Still trails the strongest summary at the 2,000-token budget (see above).
 - No first-party CLI yet (the library + JSON/Markdown is the surface).
 - Cross-client handoff trials between real agent products are tracked in
-  [issue #1](https://github.com/yunusarda-sudo/handoffstone/issues/1).
+  [issue #1](https://github.com/yunusarda-sudo/handoffstone/issues/1); see
+  [docs/cross-client-trial.md](docs/cross-client-trial.md).
 
 ## Naming
 
