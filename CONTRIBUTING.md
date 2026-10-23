@@ -39,3 +39,13 @@ python3 bench_handoffstone.py --profile  # token profile
 
 The core is a single module (`handoffstone.py`). Keep it importable with no other
 files present.
+
+## Releases
+
+1. Update `CHANGELOG.md` under a new version heading and bump
+   `project.version` in `pyproject.toml` when the public API or install story
+   changes.
+2. Open a pull request; wait for CI on Python 3.10, 3.11, and 3.13.
+3. After merge, tag from `main` as `vX.Y.ZaN` (match `pyproject.toml`) and
+   publish a GitHub Release whose notes summarize the changelog section.
+4. Do not claim a PyPI package exists until one is actually published.

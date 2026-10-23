@@ -25,14 +25,21 @@ portable JSON/Markdown.
 No runtime dependencies, Python 3.10+.
 
 ```bash
-python -m pip install .  # from a clone
+# From the latest GitHub release tag (preferred while pre-release)
+python -m pip install "git+https://github.com/yunusarda-sudo/handoffstone.git@v0.1.0a0"
+
+# Or from a clone of main
+python -m pip install .
 ```
 
-The project is pre-release; do not assume a published PyPI distribution exists.
-Install from the public GitHub repository until a release is published.
+PyPI publication is not available yet. Prefer a tagged GitHub release over an
+arbitrary `main` commit when you need a reproducible install.
 
 Or copy the single `handoffstone.py` file next to your code — the core is one
 stdlib-only module.
+
+See [CHANGELOG.md](CHANGELOG.md) for what each tag contains, and
+[SECURITY.md](SECURITY.md) for how to report vulnerabilities.
 
 ## Quick start
 
@@ -144,10 +151,12 @@ where this approach loses.
 
 ## Status
 
-`v0.1.0-alpha` — experimental. Known limitations:
+`v0.1.0a0` — experimental public alpha. Known limitations:
 
 - Still trails the strongest summary at the 2,000-token budget (see above).
 - No first-party CLI yet (the library + JSON/Markdown is the surface).
+- Cross-client handoff trials between real agent products are tracked in
+  [issue #1](https://github.com/yunusarda-sudo/handoffstone/issues/1).
 
 ## Naming
 
