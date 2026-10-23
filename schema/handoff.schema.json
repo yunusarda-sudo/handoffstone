@@ -34,7 +34,7 @@
     "evidence": {
       "type": "object",
       "properties": {
-        "kind": { "type": "string", "enum": ["file", "commit", "test", "url", "memory"] },
+        "kind": { "type": "string", "enum": ["file", "commit", "test", "url", "memory", "conversation"] },
         "locator": { "type": "string" },
         "description": { "type": "string" }
       },

@@ -7,7 +7,7 @@ name = "handoffstone"
 version = "0.1.0a0"
 description = "Portable, verifiable, decision-aware context handoffs for AI agents."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 authors = [{ name = "handoffstone contributors" }]
 keywords = ["ai-agents", "context", "handoff", "memory", "mcp", "local-first"]
