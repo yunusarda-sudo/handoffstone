@@ -8,3 +8,4 @@ venv/
 bench_results/
 .handoffstone/
 .pytest_cache/
+artifacts/

@@ -30,6 +30,7 @@ jobs:
         run: |
           python test_handoffstone.py
           python test_storage_security.py
+          python test_cross_client_fidelity.py
           python test_bench_handoffstone.py
 
       - name: Schema contract and package
