@@ -221,8 +221,9 @@ class ReliabilityTests(unittest.TestCase):
         self.assertFalse(h.HANDOFFSTONE_DIR.exists())
 
     def test_valid_scope_filenames_preserved(self):
+        root = h.HANDOFFSTONE_DIR.expanduser().resolve()
         for scope in ("project-A", "repo.name_1", "123", "x" * 128):
-            self.assertEqual(h.get_context_store_path(scope), h.HANDOFFSTONE_DIR / (scope + ".jsonl"))
+            self.assertEqual(h.get_context_store_path(scope), root / (scope + ".jsonl"))
 
     def test_scope_override_cannot_relabel_record(self):
         for scope in ("project-B", "", "../outside"):

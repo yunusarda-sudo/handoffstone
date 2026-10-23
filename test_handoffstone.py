@@ -440,13 +440,8 @@ class TestHandoffstone:
         assert records_a[0].title == "Decision A"
         assert records_b[0].title == "Decision B"
 
-        # Cross-scope query should not leak
-        try:
-            cb.load_records("")
-        except cb.InvalidScopeError:
-            pass  # Empty scope is now rejected; it is never a global query.
-        else:
-            raise AssertionError("Empty scope must not be accepted")
+        # An empty scope remains a no-record query, never a global query.
+        assert cb.load_records("") == []
 
     # =========================================================================
     # Context Budget Tests

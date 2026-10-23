@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+from importlib.metadata import PackageNotFoundError, version
 import json
 import os
 from pathlib import Path
@@ -22,6 +23,13 @@ import handoffstone as hs
 PROTOCOL = "2025-06-18"
 SCOPE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 MAX_LINE = 2 * 1024 * 1024
+
+
+def _server_version() -> str:
+    try:
+        return version("handoffstone")
+    except PackageNotFoundError:
+        return "0+source"
 
 
 class ToolFault(Exception):
@@ -434,7 +442,7 @@ def _reply(req: dict) -> dict | None:
     if method == "initialize":
         return {"jsonrpc": "2.0", "id": msg_id, "result": {
             "protocolVersion": PROTOCOL, "capabilities": {"tools": {"listChanged": False}},
-            "serverInfo": {"name": "handoffstone-m4", "version": "0.1.0-prototype"}}}
+            "serverInfo": {"name": "handoffstone-mcp", "version": _server_version()}}}
     if method == "ping":
         return {"jsonrpc": "2.0", "id": msg_id, "result": {}}
     if method == "tools/list":

@@ -150,7 +150,7 @@ class BridgeContract(unittest.TestCase):
         self.assertEqual(res.returncode, 0, res.stderr)
         lines = [json.loads(l) for l in res.stdout.splitlines()]
         self.assertEqual(len(lines), 2)
-        self.assertEqual(lines[0]["result"]["serverInfo"]["name"], "handoffstone-m4")
+        self.assertEqual(lines[0]["result"]["serverInfo"]["name"], "handoffstone-mcp")
         reply = lines[1]["result"]
         payload = json.loads(reply["content"][0]["text"])
         return reply["isError"], payload.get("result") or payload.get("error")
@@ -459,7 +459,8 @@ class RealCoreCompat(unittest.TestCase):
             "project_scope": "real", "repo_path": str(self.repo), "agent": "real",
             "label": "l", "snapshot": {"active_task": "t", "next_action": "n"}})
         self.store.mkdir(exist_ok=True)
-        (self.store / "real.jsonl").open("ab").write(b'{"partial":')
+        with (self.store / "real.jsonl").open("ab") as stream:
+            stream.write(b'{"partial":')
         outer = self._call("context_resume", {"project_scope": "real", "repo_path": str(self.repo)},
                            expected_error="store_corrupt")
         self.assertNotIn("state", outer)
