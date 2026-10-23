@@ -13,6 +13,8 @@ and this project follows [PEP 440](https://peps.python.org/pep-0440/) versioning
   (`test_cross_client_fidelity.py`, `docs/cross-client-trial.md`).
 - Fixture export helper `scripts/export_cross_client_fixture.py` for producer →
   consumer product trials.
+- PEP 639 license metadata and release checks that verify the tag against the
+  package version declared in `pyproject.toml`.
 
 ## [0.1.0a0] - 2026-10-23
 
