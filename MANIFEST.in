@@ -1,4 +1,6 @@
 include README.md
 include LICENSE
 include CONTRIBUTING.md
+include CHANGELOG.md
+include SECURITY.md
 recursive-include schema *.json
