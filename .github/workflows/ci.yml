@@ -54,14 +54,18 @@ jobs:
 
       - name: Verify source distribution in an isolated directory
         run: |
+          expected_version="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' pyproject.toml)"
+          test -n "$expected_version"
           install_dir="$(mktemp -d)"
           python -m pip install --no-deps --target "$install_dir" dist/*.tar.gz
           cd "$(mktemp -d)"
-          PYTHONPATH="$install_dir" python -c "from importlib.metadata import version; import handoffstone; assert version('handoffstone') == '0.1.0a0'; print(handoffstone.__file__)"
+          EXPECTED_VERSION="$expected_version" PYTHONPATH="$install_dir" python -c 'import os; from importlib.metadata import version; import handoffstone; expected = os.environ["EXPECTED_VERSION"]; actual = version("handoffstone"); assert actual == expected, f"expected {expected}, got {actual}"; print(handoffstone.__file__)'
 
       - name: Verify wheel in an isolated directory
         run: |
+          expected_version="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' pyproject.toml)"
+          test -n "$expected_version"
           python -m pip install --force-reinstall --no-deps dist/*.whl
           cd "$(mktemp -d)"
-          python -c "from importlib.metadata import version; import handoffstone; assert version('handoffstone') == '0.1.0a0'; print(handoffstone.__file__)"
+          EXPECTED_VERSION="$expected_version" python -c 'import os; from importlib.metadata import version; import handoffstone; expected = os.environ["EXPECTED_VERSION"]; actual = version("handoffstone"); assert actual == expected, f"expected {expected}, got {actual}"; print(handoffstone.__file__)'
           python -m pip check
