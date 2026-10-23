@@ -30,6 +30,9 @@ jobs:
       - name: Core tests
         run: python test_handoffstone.py
 
+      - name: Storage security regressions
+        run: python test_storage_security.py
+
       - name: Benchmark and negative controls
         run: python test_bench_handoffstone.py
 

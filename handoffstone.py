@@ -1172,25 +1172,41 @@ HANDOFFSTONE_DIR = Path(HANDOFFSTONE_HOME).expanduser() if HANDOFFSTONE_HOME els
 
 
 def get_context_store_path(scope: str) -> Path:
-    """Get the storage path for a project scope."""
-    HANDOFFSTONE_DIR.mkdir(parents=True, mode=0o700, exist_ok=True)
-    return HANDOFFSTONE_DIR / f"{scope}.jsonl"
+    """Resolve a project store without accepting traversal or symlink targets.
+
+    Scope is a filename component, not a filesystem path. Existing ordinary
+    scope names preserve their historical on-disk filename.
+    """
+    if (not isinstance(scope, str) or not scope or scope in {".", ".."}
+            or "/" in scope or "\\" in scope or "\x00" in scope):
+        raise ValueError("Project scope must be a non-empty filename component")
+    root = HANDOFFSTONE_DIR.expanduser().resolve()
+    root.mkdir(parents=True, mode=0o700, exist_ok=True)
+    path = root / f"{scope}.jsonl"
+    if path.is_symlink():
+        raise ValueError("Refusing a symlink context store")
+    return path
 
 
 def save_record(record: ContextRecord, scope: str = None) -> bool:
-    """Persist a context record to local storage."""
+    """Persist a record; new store files are private (0600 on POSIX)."""
     scope = scope or record.project_scope
     path = get_context_store_path(scope)
     try:
-        with open(path, "a", encoding="utf-8") as f:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND
+        flags |= getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(path, flags, 0o600)
+        with os.fdopen(fd, "a", encoding="utf-8") as f:
             f.write(record_to_json(record) + "\n")
         return True
-    except Exception:
+    except (OSError, ValueError):
         return False
 
 
 def load_records(scope: str, kind: RecordKind = None) -> list[ContextRecord]:
     """Load context records from local storage (latest version per ID)."""
+    if scope == "":
+        return []  # preserve the existing empty-scope isolation behavior
     path = get_context_store_path(scope)
     if not path.exists():
         return []
