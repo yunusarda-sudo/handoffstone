@@ -3,12 +3,11 @@
 The optional `handoffstone-mcp` command exposes checkpoint, resume, and handoff
 tools over MCP JSON-RPC stdio. It is a local integration for compatible MCP
 hosts; it does not provide a hosted service or product UI. The published
-`0.1.0a1` artifact predates this adapter. Until a later release includes it,
-install from a trusted checkout containing the adapter with
-`python -m pip install .`.
+`0.1.0a1` artifact predates this adapter; `0.1.0a2` is the first release to
+include it.
 
-Configure the MCP host to launch `handoffstone-mcp` with these environment
-variables:
+Install the `v0.1.0a2` GitHub release or a trusted checkout, then configure the
+MCP host to launch `handoffstone-mcp` with these environment variables:
 
 - `HANDOFFSTONE_HOME`: an absolute path to the private local JSONL store.
 - `HANDOFFSTONE_ALLOWED_REPO_ROOT`: an absolute path containing repositories

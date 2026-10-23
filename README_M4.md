@@ -9,7 +9,7 @@ package.
 - Handoffstone requires Python 3.10 or newer.
 - The published `v0.1.0a1` release contains the core library and does not contain
   the MCP adapter.
-- The adapter and its packaging are under review in [PR #11](https://github.com/yunusarda-sudo/handoffstone/pull/11).
+- The MCP adapter and its packaging are included in the `v0.1.0a2` release.
 - Current setup and trust boundaries are in [MCP documentation](docs/MCP.md).
 - Core persistence guarantees and failure behavior are in
   [P0 reliability notes](docs/P0_RELIABILITY.md).
