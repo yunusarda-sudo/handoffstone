@@ -25,8 +25,8 @@ portable JSON/Markdown.
 No runtime dependencies, Python 3.10+.
 
 ```bash
-# From the latest GitHub release tag (preferred while pre-release)
-python -m pip install "git+https://github.com/yunusarda-sudo/handoffstone.git@v0.1.0a1"
+# From the GitHub release tag (MCP adapter included in v0.1.0a2)
+python -m pip install "git+https://github.com/yunusarda-sudo/handoffstone.git@v0.1.0a2"
 
 # Or from a clone of main
 python -m pip install .
@@ -154,9 +154,9 @@ where this approach loses.
 
 ## Status
 
-`v0.1.0a1` — experimental public alpha. The published alpha is the core library;
-the MCP adapter is available on the current development branch pending its own
-review and release. Known limitations:
+`v0.1.0a2` — experimental public alpha. The `v0.1.0a1` release contains the
+core library; `v0.1.0a2` adds the optional local MCP stdio adapter. Known
+limitations:
 
 - Still trails the strongest summary at the 2,000-token budget (see above).
 - No general-purpose first-party CLI; `handoffstone-mcp` is a local MCP bridge.

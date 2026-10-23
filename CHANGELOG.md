@@ -7,23 +7,39 @@ and this project follows [PEP 440](https://peps.python.org/pep-0440/) versioning
 
 ## [Unreleased]
 
+## [0.1.0a2] - 2026-10-24
+
+Third public alpha. Adds the optional local MCP stdio adapter, launched by the
+packaged `handoffstone-mcp` command, with Git-bound checkpoint, resume, and
+handoff tools.
+
+### Added
+
+- Optional MCP stdio adapter with a packaged `handoffstone-mcp` command,
+  Git-bound checkpoint/resume/handoff tools, and explicit local trust
+  boundaries.
+- Reliability hardening and cross-version MCP contract tests.
+
+### Changed
+
+- Bind MCP resume state to Git branch, commit, index, tracked changes, and
+  untracked file contents.
+- Use unique private atomic-write temporary files and distinguish failures
+  before replacement from uncertain directory durability after replacement.
+
+## [0.1.0a1] - 2026-10-24
+
+Second public alpha. The published artifacts contain the core library; the MCP
+adapter is introduced in v0.1.0a2.
+
 ### Added
 
 - Cross-client transport fidelity tests and a documented live-trial protocol
   (`test_cross_client_fidelity.py`, `docs/cross-client-trial.md`).
 - Fixture export helper `scripts/export_cross_client_fixture.py` for producer →
   consumer product trials.
-- PEP 639 license metadata and release checks that verify the tag against the
-  package version declared in `pyproject.toml`.
-- Optional MCP stdio adapter with packaged `handoffstone-mcp` command, Git-bound
-  checkpoint/resume/handoff tools, and explicit local trust boundaries.
-- Reliability hardening and cross-version MCP contract tests.
-
-## [0.1.0a1] - 2026-10-24
-
-Second public alpha, released from the merged PEP 639 and reproducible release
-workflow changes. The published artifacts contain the core library; MCP support
-is still under review in the next development change.
+- PEP 639 license metadata and tag-to-project-version checks in release
+  validation.
 
 ## [0.1.0a0] - 2026-10-23
 
@@ -55,3 +71,4 @@ First public alpha. Portable, stdlib-only context handoffs for AI agents.
 
 [0.1.0a0]: https://github.com/yunusarda-sudo/handoffstone/releases/tag/v0.1.0a0
 [0.1.0a1]: https://github.com/yunusarda-sudo/handoffstone/releases/tag/v0.1.0a1
+[0.1.0a2]: https://github.com/yunusarda-sudo/handoffstone/releases/tag/v0.1.0a2
