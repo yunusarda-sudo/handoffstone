@@ -14,8 +14,10 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import subprocess
 import sys
+import tempfile
 from typing import Any
 
 import handoffstone as hs
@@ -69,15 +71,100 @@ def _git(path: Path, *args: str) -> str:
     return cp.stdout.strip()
 
 
-def _worktree_digest(root: Path) -> str:
-    # dirty_state + untracked files included; sorted for deterministic hashing.
-    cp = subprocess.run(["git", "-C", str(root), "status", "--porcelain",
-                         "-uall", "--no-renames"], capture_output=True,
-                        text=True, timeout=5, check=False)
+def _git_bytes(root: Path, *args: str) -> bytes:
+    try:
+        cp = subprocess.run(["git", "-C", str(root), *args], capture_output=True,
+                            timeout=10, check=False)
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        raise ToolFault("git_unavailable") from None
     if cp.returncode:
         raise ToolFault("git_probe_failed")
-    lines = sorted(cp.stdout.splitlines())
-    return hashlib.sha256("\n".join(lines).encode("utf-8", "surrogatepass")).hexdigest()
+    return cp.stdout
+
+
+def _digest_part(digest, label: bytes, value: bytes) -> None:
+    digest.update(len(label).to_bytes(4, "big"))
+    digest.update(label)
+    digest.update(len(value).to_bytes(8, "big"))
+    digest.update(value)
+
+
+def _untracked_identity(root: Path, relative_path: bytes, digest) -> None:
+    """Hash an untracked path without following symlinks or opening special files."""
+    full_path = os.path.join(os.fsencode(root), relative_path)
+    try:
+        before = os.lstat(full_path)
+    except OSError:
+        raise ToolFault("worktree_unstable") from None
+
+    _digest_part(digest, b"untracked-path", relative_path)
+    _digest_part(digest, b"untracked-mode", str(before.st_mode).encode("ascii"))
+    if stat.S_ISLNK(before.st_mode):
+        try:
+            target = os.readlink(full_path)
+            after = os.lstat(full_path)
+        except OSError:
+            raise ToolFault("worktree_unstable") from None
+        if (before.st_dev, before.st_ino, before.st_ctime_ns) != (
+                after.st_dev, after.st_ino, after.st_ctime_ns):
+            raise ToolFault("worktree_unstable")
+        _digest_part(digest, b"untracked-symlink", os.fsencode(target))
+        return
+
+    if not stat.S_ISREG(before.st_mode):
+        # Include stable metadata, but never block opening a FIFO/device/socket.
+        metadata = "{}:{}:{}:{}".format(
+            before.st_size, before.st_rdev, before.st_mtime_ns, before.st_ctime_ns)
+        _digest_part(digest, b"untracked-special", metadata.encode("ascii"))
+        return
+
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    flags |= getattr(os, "O_CLOEXEC", 0)
+    try:
+        fd = os.open(full_path, flags)
+        content_hash = hashlib.sha256()
+        size = 0
+        with os.fdopen(fd, "rb") as stream:
+            opened = os.fstat(stream.fileno())
+            if (not stat.S_ISREG(opened.st_mode)
+                    or (before.st_dev, before.st_ino) != (opened.st_dev, opened.st_ino)):
+                raise ToolFault("worktree_unstable")
+            while True:
+                chunk = stream.read(1024 * 1024)
+                if not chunk:
+                    break
+                size += len(chunk)
+                content_hash.update(chunk)
+            after = os.fstat(stream.fileno())
+    except ToolFault:
+        raise
+    except OSError:
+        raise ToolFault("worktree_unstable") from None
+    if (opened.st_size, opened.st_mtime_ns, opened.st_ctime_ns) != (
+            after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+        raise ToolFault("worktree_unstable")
+    _digest_part(digest, b"untracked-size", str(size).encode("ascii"))
+    _digest_part(digest, b"untracked-content-sha256", content_hash.digest())
+
+
+def _worktree_digest(root: Path, branch: str, head: str) -> str:
+    """Bind resume state to refs, index, tracked diffs, and untracked contents."""
+    digest = hashlib.sha256()
+    _digest_part(digest, b"branch", branch.encode("utf-8", "surrogatepass"))
+    _digest_part(digest, b"head", head.encode("ascii", "strict"))
+    _digest_part(digest, b"status", _git_bytes(
+        root, "status", "--porcelain=v1", "-z", "-uall", "--no-renames",
+        "--ignore-submodules=none"))
+    common_diff_args = ("--binary", "--no-ext-diff", "--no-textconv",
+                        "--no-renames", "--submodule=diff")
+    _digest_part(digest, b"index-diff", _git_bytes(
+        root, "diff", "--cached", *common_diff_args, "HEAD", "--"))
+    _digest_part(digest, b"worktree-diff", _git_bytes(
+        root, "diff", *common_diff_args, "--"))
+    untracked = _git_bytes(root, "ls-files", "--others", "--exclude-standard", "-z", "--")
+    for relative_path in sorted(part for part in untracked.split(b"\0") if part):
+        _untracked_identity(root, relative_path, digest)
+    return digest.hexdigest()
 
 
 def _repo(path: Any) -> dict:
@@ -92,7 +179,7 @@ def _repo(path: Any) -> dict:
         raise ToolFault("git_root_outside_allowed_root")
     branch = _git(root, "symbolic-ref", "--quiet", "--short", "HEAD")
     head = _git(root, "rev-parse", "HEAD")
-    dirty = _worktree_digest(root)
+    dirty = _worktree_digest(root, branch, head)
     return {"root": str(root), "branch": branch, "head": head, "dirty_digest": dirty}
 
 
@@ -240,54 +327,67 @@ def _assemble(args: dict):
 def _atomic_write_records(scope: str, records: list) -> str:
     """All records of one tool call land in a single atomic store swap.
 
-    Serializes through the core's own validation (create_record/record_to_json),
-    then writes the complete new store (existing bytes + new lines) to a temp
-    file, fsyncs and os.replace()s the scope store. A failure before the swap
-    leaves the original store byte-identical: no partial multi-record state.
-    Single-writer only (no cross-process locking); concurrency stays a gap.
+    Serializes through the core's own validation, writes and syncs a uniquely
+    created private temp file, then atomically replaces the scope store. Errors
+    before replace guarantee the old file remains; errors after replace report
+    that new bytes are visible but directory durability is uncertain. This is
+    single-writer only; there is no cross-process locking.
     """
-    import stat as stat_module
-    store_dir = hs.HANDOFFSTONE_DIR
+    store_dir = Path(hs.HANDOFFSTONE_DIR).expanduser().resolve()
     path = hs.get_context_store_path(scope)
     payload = "".join(hs.record_to_json(r) + "\n" for r in records)
     if os.environ.get("MCP_FAIL_ATOMIC"):
         raise ToolFault("write_failed_atomic_no_partial")
     store_dir.mkdir(parents=True, mode=0o700, exist_ok=True)
     nofollow = getattr(os, "O_NOFOLLOW", None)
-    flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | (nofollow or 0)
+    nonblock = getattr(os, "O_NONBLOCK", 0)
     existing = b""
     try:
-        fd = os.open(path, os.O_RDONLY | (nofollow or 0))
-        try:
-            if not stat_module.S_ISREG(os.fstat(fd).st_mode):
+        fd = os.open(path, os.O_RDONLY | (nofollow or 0) | nonblock)
+        with os.fdopen(fd, "rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
                 raise OSError("store is not a regular file")
-            existing = os.read(fd, os.fstat(fd).st_size)
-        finally:
-            os.close(fd)
+            existing = stream.read()
     except FileNotFoundError:
         pass
     except OSError:
         raise ToolFault("store_unavailable") from None
-    tmp = path.with_name(path.name + ".tmp-atomic")
+
+    tmp = None
+    replaced = False
     try:
-        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | (nofollow or 0), 0o600)
+        fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.tmp-", dir=store_dir)
+        tmp = Path(tmp_name)
         with os.fdopen(fd, "wb") as f:
+            fchmod = getattr(os, "fchmod", None)
+            if fchmod is not None:
+                fchmod(f.fileno(), 0o600)
             f.write(existing)
             f.write(payload.encode("utf-8"))
             f.flush()
+            if os.environ.get("MCP_FAIL_FILE_FSYNC"):
+                raise OSError("synthetic file fsync failure")
             os.fsync(f.fileno())
         os.replace(tmp, path)
-        dir_fd = os.open(store_dir, os.O_RDONLY)
-        try:
-            os.fsync(dir_fd)
-        finally:
-            os.close(dir_fd)
+        replaced = True
+        if os.environ.get("MCP_FAIL_DIR_FSYNC"):
+            raise OSError("synthetic directory fsync failure")
+        if os.name != "nt":
+            dir_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | (nofollow or 0)
+            dir_fd = os.open(store_dir, dir_flags)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
     except OSError:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise ToolFault("write_failed_atomic_no_partial") from None
+        if not replaced:
+            if tmp is not None:
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
+            raise ToolFault("write_failed_atomic_no_partial") from None
+        raise ToolFault("write_applied_durability_uncertain") from None
     return str(path)
 
 

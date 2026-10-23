@@ -295,6 +295,45 @@ class BridgeContract(unittest.TestCase):
         self.assertEqual(result["code"], "write_failed_atomic_no_partial")
         self.assertFalse((self.store / "p1.jsonl").exists())
 
+    def test_replace_then_directory_fsync_failure_reports_applied_write(self):
+        env = dict(self.env, MCP_FAIL_DIR_FSYNC="1")
+        err, result = self.call("context_checkpoint", {
+            "project_scope": "p1", "repo_path": str(self.repo),
+            "agent": "fake", "label": "applied", "snapshot": {
+                "active_task": "check persistence", "next_action": "reload"}}, env=env)
+        self.assertTrue(err)
+        self.assertEqual(result["code"], "write_applied_durability_uncertain")
+        stored = self.store / "p1.jsonl"
+        self.assertTrue(stored.is_file())
+        self.assertTrue(any(json.loads(line).get("label") == "applied"
+                            for line in stored.read_text().splitlines()))
+        self.assertEqual(list(self.store.glob(".p1.jsonl.tmp-*")), [])
+
+    def test_file_fsync_failure_preserves_original_store_and_cleans_temp(self):
+        self.assertFalse(self.checkpoint()[0])
+        stored = self.store / "p1.jsonl"
+        before = stored.read_bytes()
+        env = dict(self.env, MCP_FAIL_FILE_FSYNC="1")
+        err, result = self.call("context_checkpoint", {
+            "project_scope": "p1", "repo_path": str(self.repo),
+            "agent": "fake", "label": "not-applied", "snapshot": {
+                "active_task": "check persistence", "next_action": "retry"}}, env=env)
+        self.assertTrue(err)
+        self.assertEqual(result["code"], "write_failed_atomic_no_partial")
+        self.assertEqual(stored.read_bytes(), before)
+        self.assertEqual(list(self.store.glob(".p1.jsonl.tmp-*")), [])
+
+    def test_unique_atomic_temp_does_not_follow_legacy_collision(self):
+        self.store.mkdir()
+        outside = self.root / "outside-sentinel"
+        outside.write_text("unchanged")
+        legacy_temp = self.store / "p1.jsonl.tmp-atomic"
+        legacy_temp.symlink_to(outside)
+        err, result = self.checkpoint()
+        self.assertFalse(err, result)
+        self.assertEqual(outside.read_text(), "unchanged")
+        self.assertTrue(legacy_temp.is_symlink())
+
     def test_store_bytes_identical_after_failed_batch(self):
         self.assertFalse(self.checkpoint()[0])
         before = (self.store / "p1.jsonl").read_bytes()
@@ -354,6 +393,52 @@ class BridgeContract(unittest.TestCase):
         self.assertIsNone(result["context"])
         scratch.unlink()
         self.assertEqual(self.resume()[1]["state"], "ready")
+
+    def test_same_porcelain_tracked_content_change_invalidates_resume(self):
+        tracked = self.repo / "README.md"
+        tracked.write_text("dirty content A\n")
+        status_a = subprocess.check_output(
+            ["git", "-C", str(self.repo), "status", "--porcelain"]).strip()
+        self.assertFalse(self.checkpoint()[0])
+        tracked.write_text("dirty content B\n")
+        status_b = subprocess.check_output(
+            ["git", "-C", str(self.repo), "status", "--porcelain"]).strip()
+        self.assertEqual(status_a, status_b)
+        err, result = self.resume()
+        self.assertFalse(err)
+        self.assertEqual(result["state"], "worktree_changed")
+
+    def test_same_porcelain_staged_content_change_invalidates_resume(self):
+        tracked = self.repo / "README.md"
+        tracked.write_text("staged content A\n")
+        subprocess.run(["git", "-C", str(self.repo), "add", "README.md"],
+                       check=True, capture_output=True)
+        status_a = subprocess.check_output(
+            ["git", "-C", str(self.repo), "status", "--porcelain"]).strip()
+        self.assertFalse(self.checkpoint()[0])
+        tracked.write_text("staged content B\n")
+        subprocess.run(["git", "-C", str(self.repo), "add", "README.md"],
+                       check=True, capture_output=True)
+        status_b = subprocess.check_output(
+            ["git", "-C", str(self.repo), "status", "--porcelain"]).strip()
+        self.assertEqual(status_a, status_b)
+        err, result = self.resume()
+        self.assertFalse(err)
+        self.assertEqual(result["state"], "worktree_changed")
+
+    def test_same_porcelain_untracked_content_change_invalidates_resume(self):
+        untracked = self.repo / "scratch.txt"
+        untracked.write_text("untracked content A\n")
+        status_a = subprocess.check_output(
+            ["git", "-C", str(self.repo), "status", "--porcelain"]).strip()
+        self.assertFalse(self.checkpoint()[0])
+        untracked.write_text("untracked content B\n")
+        status_b = subprocess.check_output(
+            ["git", "-C", str(self.repo), "status", "--porcelain"]).strip()
+        self.assertEqual(status_a, status_b)
+        err, result = self.resume()
+        self.assertFalse(err)
+        self.assertEqual(result["state"], "worktree_changed")
 
     def test_dirty_digest_persisted_in_checkpoint(self):
         self.assertFalse(self.checkpoint()[0])
