@@ -22,12 +22,14 @@ portable JSON/Markdown.
 
 ## Install
 
-No dependencies, Python 3.9+.
+No runtime dependencies, Python 3.10+.
 
 ```bash
-pip install .            # from a clone
-pip install handoffstone   # once published (alpha)
+python -m pip install .  # from a clone
 ```
+
+The project is pre-release; do not assume a published PyPI distribution exists.
+Install from the public GitHub repository until a release is published.
 
 Or copy the single `handoffstone.py` file next to your code — the core is one
 stdlib-only module.
