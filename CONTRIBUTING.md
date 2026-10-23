@@ -20,6 +20,7 @@ python3 test_handoffstone.py           # core: expects 41 passing
 python3 test_storage_security.py       # local store hardening
 python3 test_cross_client_fidelity.py  # producer/consumer transport gate
 python3 test_bench_handoffstone.py     # benchmark: expects 25 passing
+python3 -B -m unittest -v test_reliability  # P0 public-boundary regressions
 python3 handoffstone.py                # smoke test (throwaway store)
 python3 bench_handoffstone.py          # equal-budget sweep
 python3 bench_handoffstone.py --profile  # token profile

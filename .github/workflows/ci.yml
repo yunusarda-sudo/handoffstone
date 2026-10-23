@@ -30,11 +30,17 @@ jobs:
       - name: Core tests
         run: python test_handoffstone.py
 
+      - name: Reliability regressions
+        run: python -B -m unittest -v test_reliability
+
       - name: Storage security regressions
         run: python test_storage_security.py
 
       - name: Cross-client transport fidelity
         run: python test_cross_client_fidelity.py
+
+      - name: MCP protocol and core integration
+        run: python test_mcp_bridge.py
 
       - name: Benchmark and negative controls
         run: python test_bench_handoffstone.py
@@ -69,3 +75,4 @@ jobs:
           cd "$(mktemp -d)"
           EXPECTED_VERSION="$expected_version" python -c 'import os; from importlib.metadata import version; import handoffstone; expected = os.environ["EXPECTED_VERSION"]; actual = version("handoffstone"); assert actual == expected, f"expected {expected}, got {actual}"; print(handoffstone.__file__)'
           python -m pip check
+          EXPECTED_VERSION="$expected_version" python "$GITHUB_WORKSPACE/test_mcp_packaged_entrypoint.py"

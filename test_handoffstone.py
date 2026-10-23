@@ -24,6 +24,12 @@ from pathlib import Path
 import handoffstone as cb
 
 
+def _fixture_evidence():
+    """Explicit synthetic attestation for tests of VERIFIED serialization."""
+    return [cb.EvidenceReference(id="fixture-assertion", kind="test",
+                                 locator=__file__, verified=True)]
+
+
 class TestHandoffstone:
     """Test suite for handoffstone functionality."""
 
@@ -85,7 +91,7 @@ class TestHandoffstone:
             ],
             outcome="accepted",
             tags=["architecture", "storage"],
-            status=cb.VerificationStatus.VERIFIED,
+            evidence_refs=_fixture_evidence(), status=cb.VerificationStatus.VERIFIED,
         )
 
         assert dr.id.startswith("decisionrecord-")
@@ -112,7 +118,7 @@ class TestHandoffstone:
             category="security",
             severity="critical",
             source="architecture_decision",
-            status=cb.VerificationStatus.VERIFIED,
+            evidence_refs=_fixture_evidence(), status=cb.VerificationStatus.VERIFIED,
         )
 
         assert cr.id.startswith("constraintrecord-")
@@ -228,7 +234,7 @@ class TestHandoffstone:
             decision="Use Redis",
             rationale="Fast in-memory cache",
             outcome="accepted",
-            status=cb.VerificationStatus.VERIFIED,
+            evidence_refs=_fixture_evidence(), status=cb.VerificationStatus.VERIFIED,
         )
 
         # Create superseding decision
@@ -240,7 +246,7 @@ class TestHandoffstone:
             rationale="Redis adds operational complexity; SQLite WAL is fast enough",
             outcome="accepted",
             supersedes=[dr1.id],
-            status=cb.VerificationStatus.VERIFIED,
+            evidence_refs=_fixture_evidence(), status=cb.VerificationStatus.VERIFIED,
         )
 
         # Reload dr1 from disk to get updated superseded_by
@@ -340,7 +346,7 @@ class TestHandoffstone:
         c = cb.create_record(cb.RecordKind.CONSTRAINT_RECORD, project_scope=self.scope,
                              created_by=self.agent, constraint="No secrets in logs",
                              category="security", severity="critical", source="user",
-                             status=cb.VerificationStatus.VERIFIED)
+                             evidence=_fixture_evidence(), status=cb.VerificationStatus.VERIFIED)
         ws = cb.create_record(cb.RecordKind.WORKING_STATE, project_scope=self.scope,
                               created_by=self.agent, active_task="ship", state="blocked",
                               next_action="write tests")
@@ -434,10 +440,8 @@ class TestHandoffstone:
         assert records_a[0].title == "Decision A"
         assert records_b[0].title == "Decision B"
 
-        # Cross-scope query should not leak
-        all_records = cb.load_records("")  # Empty scope = all
-        # But our implementation uses scope-specific files, so empty scope returns nothing
-        # This is correct behavior for isolation
+        # An empty scope remains a no-record query, never a global query.
+        assert cb.load_records("") == []
 
     # =========================================================================
     # Context Budget Tests
@@ -605,7 +609,7 @@ class TestHandoffstone:
             title="Test Decision",
             decision="Test",
             rationale="Test",
-            status=cb.VerificationStatus.VERIFIED,
+            evidence_refs=_fixture_evidence(), status=cb.VerificationStatus.VERIFIED,
         )
 
         cr = cb.capture_constraint(
@@ -857,7 +861,7 @@ class TestMVPVerticalSlice:
             ],
             outcome="accepted",
             tags=["database", "architecture"],
-            status=cb.VerificationStatus.VERIFIED,
+            evidence_refs=_fixture_evidence(), status=cb.VerificationStatus.VERIFIED,
         )
 
         # 3. Revise the decision (simulating change of mind)
@@ -874,7 +878,7 @@ class TestMVPVerticalSlice:
             outcome="accepted",
             tags=["database", "architecture"],
             supersedes=[dr1.id],
-            status=cb.VerificationStatus.VERIFIED,
+            evidence_refs=_fixture_evidence(), status=cb.VerificationStatus.VERIFIED,
         )
 
         # 4. Capture a constraint
@@ -885,7 +889,7 @@ class TestMVPVerticalSlice:
             category="architecture",
             severity="critical",
             source="architecture_decision",
-            status=cb.VerificationStatus.VERIFIED,
+            evidence_refs=_fixture_evidence(), status=cb.VerificationStatus.VERIFIED,
         )
 
         # 5. Leave task half-done - capture working state

@@ -26,7 +26,7 @@ No runtime dependencies, Python 3.10+.
 
 ```bash
 # From the latest GitHub release tag (preferred while pre-release)
-python -m pip install "git+https://github.com/yunusarda-sudo/handoffstone.git@v0.1.0a0"
+python -m pip install "git+https://github.com/yunusarda-sudo/handoffstone.git@v0.1.0a1"
 
 # Or from a clone of main
 python -m pip install .
@@ -34,6 +34,9 @@ python -m pip install .
 
 PyPI publication is not available yet. Prefer a tagged GitHub release over an
 arbitrary `main` commit when you need a reproducible install.
+
+The optional MCP stdio adapter is exposed as `handoffstone-mcp` when installed
+from a build that includes it. See [MCP setup and security boundaries](docs/MCP.md).
 
 Or copy the single `handoffstone.py` file next to your code — the core is one
 stdlib-only module.
@@ -151,13 +154,30 @@ where this approach loses.
 
 ## Status
 
-`v0.1.0a0` — experimental public alpha. Known limitations:
+`v0.1.0a1` — experimental public alpha. The published alpha is the core library;
+the MCP adapter is available on the current development branch pending its own
+review and release. Known limitations:
 
 - Still trails the strongest summary at the 2,000-token budget (see above).
-- No first-party CLI yet (the library + JSON/Markdown is the surface).
+- No general-purpose first-party CLI; `handoffstone-mcp` is a local MCP bridge.
 - Cross-client handoff trials between real agent products are tracked in
   [issue #1](https://github.com/yunusarda-sudo/handoffstone/issues/1); see
   [docs/cross-client-trial.md](docs/cross-client-trial.md).
+
+### Reliability boundaries
+
+The P0 hardening keeps JSONL and the existing data formats. Canonical VERIFIED
+records require usable, explicitly attested evidence. Recognized sensitive
+content and unsafe/mismatched scopes are rejected; write failures propagate,
+and corrupted/unavailable stores are distinct from an empty store. Safe legacy
+records remain readable, but previously unsafe inputs intentionally fail closed.
+
+See [P0 reliability and compatibility](docs/P0_RELIABILITY.md) for the exception
+API and limits, including pattern-based secret detection and non-transactional
+multi-record updates. Run `python3 -B -m unittest -v test_reliability` for the
+negative/regression suite. This does not establish live evidence truth, crash
+recovery, or real-agent superiority. The [minimum real-agent adapter](docs/REAL_AGENT_ADAPTER_DESIGN.md)
+is a design, not an implemented service or completed comparison.
 
 ## Naming
 

@@ -84,6 +84,7 @@ def build_producer_package(agent: str = "producer-client") -> hs.ContextPackage:
         kind="conversation",
         locator="trial-thread-1",
         description="Producer captured the database decision from chat",
+        verified=True,
     )
     project = hs.create_record(
         hs.RecordKind.PROJECT_CONTEXT,
@@ -125,6 +126,7 @@ def build_producer_package(agent: str = "producer-client") -> hs.ContextPackage:
         category="architecture",
         severity="critical",
         source="project_charter",
+        evidence_refs=[evidence],
         status=hs.VerificationStatus.VERIFIED,
     )
     working = hs.capture_working_state(

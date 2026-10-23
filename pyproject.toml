@@ -23,13 +23,16 @@ classifiers = [
 ]
 dependencies = []
 
+[project.scripts]
+handoffstone-mcp = "mcp_stdio:main"
+
 [project.urls]
 Repository = "https://github.com/yunusarda-sudo/handoffstone"
 Changelog = "https://github.com/yunusarda-sudo/handoffstone/blob/main/CHANGELOG.md"
 Issues = "https://github.com/yunusarda-sudo/handoffstone/issues"
 
 [tool.setuptools]
-py-modules = ["handoffstone"]
+py-modules = ["handoffstone", "mcp_stdio"]
 
 [tool.setuptools.data-files]
 "share/handoffstone/schema" = ["schema/handoff.schema.json"]

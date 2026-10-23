@@ -15,6 +15,15 @@ and this project follows [PEP 440](https://peps.python.org/pep-0440/) versioning
   consumer product trials.
 - PEP 639 license metadata and release checks that verify the tag against the
   package version declared in `pyproject.toml`.
+- Optional MCP stdio adapter with packaged `handoffstone-mcp` command, Git-bound
+  checkpoint/resume/handoff tools, and explicit local trust boundaries.
+- Reliability hardening and cross-version MCP contract tests.
+
+## [0.1.0a1] - 2026-10-24
+
+Second public alpha, released from the merged PEP 639 and reproducible release
+workflow changes. The published artifacts contain the core library; MCP support
+is still under review in the next development change.
 
 ## [0.1.0a0] - 2026-10-23
 
@@ -45,3 +54,4 @@ First public alpha. Portable, stdlib-only context handoffs for AI agents.
 - Declared minimum Python version is 3.10 (matches runtime union type usage).
 
 [0.1.0a0]: https://github.com/yunusarda-sudo/handoffstone/releases/tag/v0.1.0a0
+[0.1.0a1]: https://github.com/yunusarda-sudo/handoffstone/releases/tag/v0.1.0a1

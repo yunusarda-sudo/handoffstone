@@ -29,8 +29,10 @@ jobs:
       - name: Core and storage tests
         run: |
           python test_handoffstone.py
+          python -B -m unittest -v test_reliability
           python test_storage_security.py
           python test_cross_client_fidelity.py
+          python test_mcp_bridge.py
           python test_bench_handoffstone.py
 
       - name: Verify tag matches project version
@@ -56,3 +58,4 @@ jobs:
           python -m pip install --force-reinstall --no-deps dist/*.whl
           cd "$(mktemp -d)"
           RELEASE_VERSION="${GITHUB_REF_NAME#v}" python -c 'import os; from importlib.metadata import version; import handoffstone; expected = os.environ["RELEASE_VERSION"]; actual = version("handoffstone"); assert actual == expected, f"expected {expected}, got {actual}"; print(handoffstone.__file__)'
+          EXPECTED_VERSION="${GITHUB_REF_NAME#v}" python "$GITHUB_WORKSPACE/test_mcp_packaged_entrypoint.py"
