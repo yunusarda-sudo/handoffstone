@@ -50,6 +50,26 @@ Live Claude Code ↔ Codex trials follow
 3. **Schema review** — `schema/handoff.schema.json` should match
    `ContextPackage.to_dict()` exactly (the canonical export, not the wire form).
 
+## Contributing from outside
+
+You do not need write access to this repository.
+
+1. Fork the repository and create a branch from `main`.
+2. Keep the change to one behavior, and add or update a test.
+3. Open a pull request against `main`. `@yunusarda-sudo` is requested for review.
+4. Wait for CI on Python 3.10, 3.11, 3.12, 3.13, and 3.14.
+
+A maintainer merges. `main` rejects direct pushes and force-pushes, including from maintainers: the branch requires a pull request and those five green checks. A second approving review is not required, because there is one maintainer. The maintainer still decides what lands.
+
+These will not be merged:
+
+- A third-party import in `handoffstone.py`
+- A weaker or deleted negative control
+- A benchmark or README change that hides a loss
+- A commit that contains secrets, tokens, or a real project store
+
+Start with the open [`help wanted` issues](https://github.com/yunusarda-sudo/handoffstone/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22). A written benchmark-fairness review on issue #2 is a useful first contribution and does not require a code change. Maintainer automation is not an outside task.
+
 ## Packaging note
 
 The core is a single module (`handoffstone.py`). Keep it importable with no other
