@@ -1,5 +1,7 @@
 # handoffstone
 
+[![CI](https://github.com/yunusarda-sudo/handoffstone/actions/workflows/ci.yml/badge.svg)](https://github.com/yunusarda-sudo/handoffstone/actions/workflows/ci.yml)
+
 > Portable, verifiable, decision-aware context handoffs for AI agents.
 
 ## What it is
@@ -186,6 +188,14 @@ durable, verifiable reference point. The name was chosen after a collision check
 common single-word candidates (`baton`, `cairn`, `tessera`, `waystone`, ...) are
 all taken on PyPI and/or by adjacent AI-memory projects. `handoffstone` is free on
 PyPI with no naming collision on GitHub.
+
+## Community
+
+- [Contributing](CONTRIBUTING.md) — checks, ground rules, and releases
+- [Documentation](docs/README.md) — which docs are current
+- [Security](SECURITY.md) — private vulnerability reports
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Changelog](CHANGELOG.md)
 
 ## License
 

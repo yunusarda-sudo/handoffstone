@@ -3,6 +3,12 @@
 `handoffstone` is a v0.1.0-alpha. The most valuable contributions right now are the ones
 that make the core **more useful and more honest**, not larger.
 
+Participation is covered by the [Code of Conduct](CODE_OF_CONDUCT.md).
+Report security problems privately, as described in [SECURITY.md](SECURITY.md).
+Use the bug and feature issue forms for concrete defects and proposals; use
+[Discussions](https://github.com/yunusarda-sudo/handoffstone/discussions) for
+open design questions.
+
 ## Ground rules
 
 - **Stdlib only in the core.** `handoffstone.py` must keep zero third-party imports.
@@ -16,11 +22,14 @@ that make the core **more useful and more honest**, not larger.
 ## Running the checks
 
 ```bash
+python3 -m pip install -e '.[dev]'     # jsonschema for the schema contract
 python3 test_handoffstone.py           # core: expects 41 passing
 python3 test_storage_security.py       # local store hardening
 python3 test_cross_client_fidelity.py  # producer/consumer transport gate
+python3 test_mcp_bridge.py             # MCP protocol and core integration
 python3 test_bench_handoffstone.py     # benchmark: expects 25 passing
 python3 -B -m unittest -v test_reliability  # P0 public-boundary regressions
+python3 test_schema_contract.py        # canonical export vs JSON Schema
 python3 handoffstone.py                # smoke test (throwaway store)
 python3 bench_handoffstone.py          # equal-budget sweep
 python3 bench_handoffstone.py --profile  # token profile
@@ -51,7 +60,7 @@ files present.
 1. Update `CHANGELOG.md` under a new version heading and bump
    `project.version` in `pyproject.toml` when the public API or install story
    changes.
-2. Open a pull request; wait for CI on Python 3.10, 3.11, and 3.13.
+2. Open a pull request; wait for CI on Python 3.10, 3.11, 3.12, 3.13, and 3.14.
 3. After merge, tag from `main` as `vX.Y.ZaN` (match `pyproject.toml`) and
    publish a GitHub Release whose notes summarize the changelog section.
 4. Do not claim a PyPI package exists until one is actually published.

@@ -3,4 +3,5 @@ include LICENSE
 include CONTRIBUTING.md
 include CHANGELOG.md
 include SECURITY.md
+include CODE_OF_CONDUCT.md
 recursive-include schema *.json

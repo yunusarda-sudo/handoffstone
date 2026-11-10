@@ -1,0 +1,58 @@
+name: Bug report
+description: A defect in the library, the local store, or the MCP adapter
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste secrets, tokens, passwords, or a real project store.
+        Security vulnerabilities go through [private reporting](https://github.com/yunusarda-sudo/handoffstone/security/advisories/new), not this form.
+  - type: input
+    id: version
+    attributes:
+      label: handoffstone version
+      description: Release tag, commit SHA, or the version reported by importlib.metadata.
+      placeholder: 0.1.0a2
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: 3.13.1
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where it failed
+      options:
+        - Core library
+        - Local JSONL store
+        - MCP stdio adapter
+        - Packaging or install
+        - Benchmark
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: A short script or the commands you ran. Use a throwaway scope and HANDOFFSTONE_HOME.
+      render: python
+    validations:
+      required: true
