@@ -191,7 +191,7 @@ PyPI with no naming collision on GitHub.
 
 ## Community
 
-- [Contributing](CONTRIBUTING.md) — checks, ground rules, and releases
+- [Contributing](CONTRIBUTING.md) — fork, pull request, and the checks a maintainer requires before merge
 - [Documentation](docs/README.md) — which docs are current
 - [Security](SECURITY.md) — private vulnerability reports
 - [Code of Conduct](CODE_OF_CONDUCT.md)

@@ -7,6 +7,10 @@ and this project follows [PEP 440](https://peps.python.org/pep-0440/) versioning
 
 ## [Unreleased]
 
+### Changed
+
+- Outside contributions enter through forks and pull requests. `main` requires a pull request and green CI on Python 3.10–3.14 before it can move, including for maintainers.
+
 ### Added
 
 - Contributor Covenant, GitHub issue forms, a pull request template, and a
