@@ -15,21 +15,29 @@ keywords = ["ai-agents", "context", "handoff", "memory", "mcp", "local-first"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries",
 ]
 dependencies = []
+
+[project.optional-dependencies]
+dev = ["jsonschema>=4,<5"]
 
 [project.scripts]
 handoffstone-mcp = "mcp_stdio:main"
 
 [project.urls]
 Repository = "https://github.com/yunusarda-sudo/handoffstone"
+Documentation = "https://github.com/yunusarda-sudo/handoffstone/blob/main/docs/README.md"
 Changelog = "https://github.com/yunusarda-sudo/handoffstone/blob/main/CHANGELOG.md"
 Issues = "https://github.com/yunusarda-sudo/handoffstone/issues"
+Security = "https://github.com/yunusarda-sudo/handoffstone/security/policy"
 
 [tool.setuptools]
 py-modules = ["handoffstone", "mcp_stdio"]

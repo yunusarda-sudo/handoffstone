@@ -7,6 +7,13 @@ and this project follows [PEP 440](https://peps.python.org/pep-0440/) versioning
 
 ## [Unreleased]
 
+### Added
+
+- Contributor Covenant, GitHub issue forms, a pull request template, and a
+  documentation index.
+- Private vulnerability reporting as the security contact. The published
+  maintainer email is the fallback; the GitHub profile has no public email.
+
 ## [0.1.0a2] - 2026-10-24
 
 Third public alpha. Adds the optional local MCP stdio adapter, launched by the

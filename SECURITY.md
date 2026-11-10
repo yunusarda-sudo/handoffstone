@@ -31,8 +31,10 @@ or untrusted directory.
 
 Please **do not** open a public issue for security problems.
 
-Email the maintainer through the address on the GitHub profile for
-[yunusarda-sudo](https://github.com/yunusarda-sudo), and include:
+Report it through
+[private vulnerability reporting](https://github.com/yunusarda-sudo/handoffstone/security/advisories/new).
+If that form is unavailable, email
+[contact@solveny.co](mailto:contact@solveny.co). Include:
 
 1. A short description of the issue and impact.
 2. Steps to reproduce, or a minimal script against the current `main`.
