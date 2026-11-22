@@ -1,0 +1,67 @@
+name: Publish to PyPI
+
+# Publishes via PyPI Trusted Publishing (OIDC); no API token is stored.
+# One-time setup on PyPI (pending publisher): owner yunusarda-sudo,
+# repository handoffstone, workflow publish.yml, environment pypi.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Verify release tag matches project version
+        run: |
+          project_version="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' pyproject.toml)"
+          release_version="${GITHUB_REF_NAME#v}"
+          test -n "$project_version"
+          if [ "$project_version" != "$release_version" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match project version $project_version" >&2
+            exit 1
+          fi
+
+      - name: Build and check
+        run: |
+          python -m pip install build twine
+          python -m build
+          python -m twine check dist/*
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/project/handoffstone/
+    permissions:
+      id-token: write
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
