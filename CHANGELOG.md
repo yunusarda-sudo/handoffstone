@@ -9,6 +9,8 @@ and this project follows [PEP 440](https://peps.python.org/pep-0440/) versioning
 
 ### Added
 
+- In-process MCP protocol unit test suite (`test_mcp_protocol_unit.py`) testing JSON-RPC method routing (`ping`, `initialize`, `tools/list`, `tools/call`), project scope validation, parameter validation, tool faults, and memory boundary guards, raising `handoffstone_mcp.py` coverage to 62% and total repo coverage to 82%.
+- Integrated `test_mcp_protocol_unit.py` into `.github/workflows/ci.yml` across Python 3.10–3.14.
 - Standard `unittest.TestCase` inheritance for `TestHandoffstone`, `TestMVPVerticalSlice`, and `TestBench`, enabling automated discovery of all 150 tests across the codebase via `python -m unittest discover` while preserving custom checkmark CLI runners.
 - Full fidelity Markdown export testing (`test_to_markdown_full_fidelity`) verifying emoji markers, project context, decision alternatives/outcomes/evidence, change history, and constraints rendering.
 - Consumer chat export parsing and import testing (`test_consumer_chat_export_parsing_and_import`) covering ChatGPT and Claude JSON conversation dumps and error paths, elevating core library test coverage to 92%.
