@@ -8,4 +8,7 @@ venv/
 bench_results/
 .handoffstone/
 .pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
 artifacts/
