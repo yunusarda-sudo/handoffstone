@@ -42,6 +42,9 @@ jobs:
       - name: MCP protocol and core integration
         run: python test_mcp_bridge.py
 
+      - name: MCP in-process protocol unit tests
+        run: python test_mcp_protocol_unit.py
+
       - name: Benchmark and negative controls
         run: python test_bench_handoffstone.py
 
