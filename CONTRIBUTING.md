@@ -68,7 +68,7 @@ These will not be merged:
 - A benchmark or README change that hides a loss
 - A commit that contains secrets, tokens, or a real project store
 
-Start with the open [`help wanted` issues](https://github.com/yunusarda-sudo/handoffstone/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22). A written benchmark-fairness review on issue #2 is a useful first contribution and does not require a code change. Maintainer automation is not an outside task.
+Start with the open [`help wanted` issues](https://github.com/yunusarda-sudo/handoffstone/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22). A written benchmark-fairness review on issue #2 is a useful first contribution and does not require a code change. Maintainer automation is not an outside task; maintainers follow the [Maintainer Playbook](docs/MAINTAINER_PLAYBOOK.md).
 
 ## Packaging note
 
