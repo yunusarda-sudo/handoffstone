@@ -30,7 +30,7 @@ dependencies = []
 dev = ["jsonschema>=4,<5"]
 
 [project.scripts]
-handoffstone-mcp = "mcp_stdio:main"
+handoffstone-mcp = "handoffstone_mcp:main"
 
 [project.urls]
 Repository = "https://github.com/yunusarda-sudo/handoffstone"
@@ -40,7 +40,7 @@ Issues = "https://github.com/yunusarda-sudo/handoffstone/issues"
 Security = "https://github.com/yunusarda-sudo/handoffstone/security/policy"
 
 [tool.setuptools]
-py-modules = ["handoffstone", "mcp_stdio"]
+py-modules = ["handoffstone", "handoffstone_mcp"]
 
 [tool.setuptools.data-files]
 "share/handoffstone/schema" = ["schema/handoff.schema.json"]

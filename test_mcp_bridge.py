@@ -113,8 +113,8 @@ class BridgeContract(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(prefix="m4_fake_")
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
-        self.bridge = self.root / "mcp_stdio.py"
-        shutil.copy(HERE / "mcp_stdio.py", self.bridge)
+        self.bridge = self.root / "handoffstone_mcp.py"
+        shutil.copy(HERE / "handoffstone_mcp.py", self.bridge)
         (self.root / "handoffstone.py").write_text(FAKE_CORE)
         self.store = self.root / "store"
         self.workspace = self.root / "workspaces"
@@ -502,7 +502,7 @@ class RealCoreCompat(unittest.TestCase):
         subprocess.run(["git", "-C", str(self.repo), "commit", "-qm", "initial"], check=True, capture_output=True)
         self.env = dict(os.environ, HANDOFFSTONE_HOME=str(self.store),
                         HANDOFFSTONE_ALLOWED_REPO_ROOT=str(self.workspace))
-        self.bridge = HERE / "mcp_stdio.py"
+        self.bridge = HERE / "handoffstone_mcp.py"
 
     def _call(self, name, args, expected_error=None):
         messages = [
