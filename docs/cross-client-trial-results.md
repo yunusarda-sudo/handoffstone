@@ -39,8 +39,30 @@ Codex consumer reply (verbatim):
 ### Gaps
 
 - **Claude Code leg not run.** `claude -p` failed with `OAuth session expired and could not be refreshed` on this machine. Re-run after `claude` login to complete Claude Code ↔ Codex bidirectionally.
-- **MCP host** using a `context_handoff` tool is still unchecked (issue #1).
-- This trial shows two *different* agent products can agree on package fields; it is not independent external-user adoption evidence.
+- **MCP host tool lifecycle verified in automation.** Direct stdio MCP host testing now exercises `context_checkpoint`, `context_resume`, and `context_handoff` in `test_mcp_packaged_entrypoint.py` on the packaged wheel. Full GUI client integration (e.g. Claude Desktop) remains an open community trial.
+- This trial shows two *different* agent interfaces agree on package fields; it is not independent external-user adoption evidence.
+
+## 2026-11-24 — MCP stdio Host Client Lifecycle (test_mcp_packaged_entrypoint.py)
+
+| Field | Value |
+| --- | --- |
+| Producer | `handoffstone-mcp` packaged CLI via stdio JSON-RPC (`context_checkpoint`, `context_handoff`) |
+| Consumer | `handoffstone-mcp` packaged CLI via stdio JSON-RPC (`context_resume`) |
+| Transport | MCP Stdio protocol `2025-06-18` across isolated client processes |
+| Storage | `HANDOFFSTONE_HOME` JSONL persistence + Git worktree state binding |
+
+### Critical-field checklist
+
+| Group | Result |
+| --- | --- |
+| decisions | PASS (`included_decisions=1`, decision title and rationale verified) |
+| working_state | PASS (`active_task` restored identically in `context_resume`) |
+| handoff persistence | PASS (`HandoffRecord` generated with `handoff_id`) |
+| security isolation | PASS (out-of-bounds `repo_path` rejected with `repo_outside_allowed_root`) |
+
+### Automated gate
+
+`test_mcp_packaged_entrypoint.py::PackagedMcpEntryPoint::test_end_to_end_mcp_host_lifecycle`: PASSED against the built wheel distribution.
 
 ## Template for the next run
 

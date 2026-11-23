@@ -48,6 +48,9 @@ jobs:
       - name: Smoke test
         run: python handoffstone.py
 
+      - name: Maintainer triage checklist
+        run: python scripts/maintainer_pr_checklist.py --check
+
       - name: Validate JSON Schema contract
         run: |
           python -m pip install 'jsonschema>=4,<5'
