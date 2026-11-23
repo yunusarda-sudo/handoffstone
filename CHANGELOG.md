@@ -7,6 +7,12 @@ and this project follows [PEP 440](https://peps.python.org/pep-0440/) versioning
 
 ## [Unreleased]
 
+### Added
+
+- End-to-end MCP host lifecycle test in `test_mcp_packaged_entrypoint.py` testing `initialize`, `context_checkpoint`, `context_resume`, and `context_handoff` over stdio JSON-RPC against the installed wheel distribution.
+- Automated maintainer triage checklist step in `.github/workflows/ci.yml` running `scripts/maintainer_pr_checklist.py --check` across Python 3.10–3.14.
+- Cross-client trial report update in `docs/cross-client-trial-results.md` documenting automated MCP stdio host protocol verification.
+
 ## [0.1.0a3] - 2026-11-24
 
 Fourth public alpha. Renames the MCP adapter module for clean PyPI distribution, prioritizes constraints in budget fitting to surpass rival chat summaries at 2k tokens, adds the maintainer playbook and automated triage checklist, and adds the PyPI Trusted Publishing workflow.
