@@ -7,6 +7,7 @@ Current guides:
 - [Cross-client trial protocol](cross-client-trial.md) — how to run a producer → consumer trial
 - [Cross-client trial results](cross-client-trial-results.md) — trials that were actually run
 - [Benchmark fairness and token efficiency](BENCHMARK_FAIRNESS_REVIEW.md) — analysis of the 2k budget curve, token profile, and negative controls
+- [Maintainer playbook](MAINTAINER_PLAYBOOK.md) — PR triage, Codex-assisted review checklist, and release publishing flow
 
 Design and history, not install instructions:
 

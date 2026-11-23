@@ -15,6 +15,7 @@ and this project follows [PEP 440](https://peps.python.org/pep-0440/) versioning
 
 ### Added
 
+- Maintainer playbook and automated triage checklist script (`scripts/maintainer_pr_checklist.py`, `docs/MAINTAINER_PLAYBOOK.md`) for PR reviews, Codex agent triage, and release publishing flow.
 - Contributor Covenant, GitHub issue forms, a pull request template, and a
   documentation index.
 - Private vulnerability reporting as the security contact. The published
