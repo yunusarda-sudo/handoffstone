@@ -103,21 +103,32 @@ def check_negative_controls() -> tuple[bool, list[str]]:
 
 
 def check_changelog() -> tuple[bool, str]:
-    """Verify that CHANGELOG.md contains an [Unreleased] section with entries."""
+    """Verify that CHANGELOG.md contains [Unreleased] entries or top section matches pyproject version."""
     changelog = ROOT / "CHANGELOG.md"
     if not changelog.is_file():
         return False, "CHANGELOG.md not found"
 
     content = changelog.read_text(encoding="utf-8")
     unreleased_match = re.search(r"## \[Unreleased\]\s*\n(.*?)(?=\n## \[|\Z)", content, re.DOTALL)
-    if not unreleased_match:
-        return False, "no [Unreleased] section found"
+    if unreleased_match:
+        body = unreleased_match.group(1).strip()
+        bullet_count = len(re.findall(r"^\s*-\s+", body, re.MULTILINE))
+        if bullet_count > 0:
+            return True, f"{bullet_count} unreleased entries documented"
 
-    body = unreleased_match.group(1).strip()
-    bullet_count = len(re.findall(r"^\s*-\s+", body, re.MULTILINE))
-    if bullet_count == 0:
-        return False, "[Unreleased] section contains no entries"
-    return True, f"{bullet_count} unreleased entries documented"
+    # Check if a release version matching pyproject.toml is documented
+    pyproject = ROOT / "pyproject.toml"
+    if pyproject.is_file():
+        m_ver = re.search(r'version\s*=\s*"([^"]+)"', pyproject.read_text(encoding="utf-8"))
+        if m_ver:
+            cur_ver = m_ver.group(1)
+            rel_match = re.search(rf"## \[{re.escape(cur_ver)}\]\s*-\s*[\d-]+\s*\n(.*?)(?=\n## \[|\Z)", content, re.DOTALL)
+            if rel_match:
+                rel_bullets = len(re.findall(r"^\s*-\s+", rel_match.group(1), re.MULTILINE))
+                if rel_bullets > 0:
+                    return True, f"release version {cur_ver} documented with {rel_bullets} entries"
+
+    return False, "neither [Unreleased] nor current pyproject version has documented entries"
 
 
 def run_checks() -> dict[str, dict]:

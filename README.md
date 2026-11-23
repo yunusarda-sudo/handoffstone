@@ -27,8 +27,8 @@ portable JSON/Markdown.
 No runtime dependencies, Python 3.10+.
 
 ```bash
-# From the GitHub release tag (MCP adapter included in v0.1.0a2)
-python -m pip install "git+https://github.com/yunusarda-sudo/handoffstone.git@v0.1.0a2"
+# From the GitHub release tag (MCP adapter included in v0.1.0a3)
+python -m pip install "git+https://github.com/yunusarda-sudo/handoffstone.git@v0.1.0a3"
 
 # Or from a clone of main
 python -m pip install .
@@ -88,7 +88,7 @@ rows are full JSON, the `ts_*_wire` rows use the compact wire encoding:
 | method | 1000 | 2000 | 4000 | 8000 | 16000 |
 | --- | --- | --- | --- | --- | --- |
 | `ts_compact` (full JSON, before) | 0.34 | 0.53 | 0.64 | 0.86 | 0.99 |
-| **`ts_compact_wire` (after)** | **0.53** | 0.65 | **0.90** | **0.99** | **0.99** |
+| **`ts_compact_wire` (after)** | 0.47 | **0.73** | **0.96** | **0.99** | **0.99** |
 | `ts_audit_wire` | 0.21 | 0.48 | 0.87 | 1.00 | 1.00 |
 | `ts_current_wire` | 0.38 | 0.51 | 0.83 | 0.84 | 0.84 |
 | `sum_terse` | 0.43 | 0.43 | 0.43 | 0.43 | 0.43 |
