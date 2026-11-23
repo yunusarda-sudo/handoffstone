@@ -9,6 +9,9 @@ and this project follows [PEP 440](https://peps.python.org/pep-0440/) versioning
 
 ### Added
 
+- Standard `unittest.TestCase` inheritance for `TestHandoffstone`, `TestMVPVerticalSlice`, and `TestBench`, enabling automated discovery of all 150 tests across the codebase via `python -m unittest discover` while preserving custom checkmark CLI runners.
+- Full fidelity Markdown export testing (`test_to_markdown_full_fidelity`) verifying emoji markers, project context, decision alternatives/outcomes/evidence, change history, and constraints rendering.
+- Consumer chat export parsing and import testing (`test_consumer_chat_export_parsing_and_import`) covering ChatGPT and Claude JSON conversation dumps and error paths, elevating core library test coverage to 92%.
 - End-to-end MCP host lifecycle test in `test_mcp_packaged_entrypoint.py` testing `initialize`, `context_checkpoint`, `context_resume`, and `context_handoff` over stdio JSON-RPC against the installed wheel distribution.
 - Automated maintainer triage checklist step in `.github/workflows/ci.yml` running `scripts/maintainer_pr_checklist.py --check` across Python 3.10–3.14.
 - Cross-client trial report update in `docs/cross-client-trial-results.md` documenting automated MCP stdio host protocol verification.

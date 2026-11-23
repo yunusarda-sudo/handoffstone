@@ -19,6 +19,7 @@ import json
 import os
 import tempfile
 import shutil
+import unittest
 from pathlib import Path
 
 import handoffstone as cb
@@ -30,8 +31,14 @@ def _fixture_evidence():
                                  locator=__file__, verified=True)]
 
 
-class TestHandoffstone:
+class TestHandoffstone(unittest.TestCase):
     """Test suite for handoffstone functionality."""
+
+    def setUp(self):
+        self.setup_method()
+
+    def tearDown(self):
+        self.teardown_method()
 
     def setup_method(self):
         """Set up test environment with isolated storage."""
@@ -498,6 +505,177 @@ class TestHandoffstone:
         package2 = cb.ContextPackage.from_json(json_out)
         assert len(package2.decisions) == 10
 
+    def test_to_markdown_full_fidelity(self):
+        """Test Markdown export renders all sections with full fidelity."""
+        ev = cb.EvidenceReference(id="ev-1", kind="file", locator="src/app.py", description="Codebase reference", verified=True)
+        pc = cb.create_record(
+            cb.RecordKind.PROJECT_CONTEXT,
+            project_scope=self.scope,
+            created_by=self.agent,
+            name="Markdown Demo",
+            purpose="Demonstrate Markdown rendering",
+            scope=self.scope,
+            tech_stack=["Python", "Markdown"],
+            repositories=["https://github.com/test/repo"],
+        )
+        d1 = cb.DecisionRecord(
+            id="dec-1",
+            kind=cb.RecordKind.DECISION_RECORD,
+            project_scope=self.scope,
+            created_at="2026-11-24T00:00:00Z",
+            created_by=self.agent,
+            title="Database Decision",
+            decision="Use SQLite",
+            rationale="Zero ops overhead",
+            alternatives=[{"option": "PostgreSQL", "reason_rejected": "Too heavy"}],
+            outcome="Adopted",
+            evidence=[ev],
+            status=cb.VerificationStatus.VERIFIED,
+        )
+        history = [
+            cb.SupersessionEntry(
+                decision_id="dec-1",
+                supersedes="dec-0",
+                current_decision="Use SQLite",
+                previous_decision="Use JSON files",
+                change_reason="Need atomic ACID transactions",
+                status="verified",
+            )
+        ]
+        c1 = cb.ConstraintRecord(
+            id="con-1",
+            kind=cb.RecordKind.CONSTRAINT_RECORD,
+            project_scope=self.scope,
+            created_at="2026-11-24T00:00:00Z",
+            created_by=self.agent,
+            constraint="Core must remain zero third-party dependencies",
+            category="architecture",
+            severity="critical",
+            source="charter",
+            evidence=[ev],
+            status=cb.VerificationStatus.VERIFIED,
+        )
+        ws = cb.WorkingState(
+            id="ws-1",
+            kind=cb.RecordKind.WORKING_STATE,
+            project_scope=self.scope,
+            created_at="2026-11-24T00:00:00Z",
+            created_by=self.agent,
+            active_task="Markdown export test",
+            state="in_progress",
+            next_action="Review generated markdown",
+            blockers=["None"],
+            progress={"completed": ["Spec"], "remaining": ["Ship"]},
+            status=cb.VerificationStatus.UNVERIFIED,
+        )
+        pkg = cb.ContextPackage(
+            project_context=pc,
+            decisions=[d1],
+            constraints=[c1],
+            supersession_history=history,
+            working_state=ws,
+            evidence=[ev],
+            open_questions=["How does markdown render in chat?"],
+            uncertainty=["CLI color support"],
+            created_by=self.agent,
+        )
+
+        md = pkg.to_markdown()
+        self.assertIn("# Context Handoff Package", md)
+        self.assertIn("## Project Context", md)
+        self.assertIn("**Name:** Markdown Demo", md)
+        self.assertIn("## Decisions & Rationale", md)
+        self.assertIn("### ✅ Database Decision", md)
+        self.assertIn("**Decision:** Use SQLite", md)
+        self.assertIn("**Alternatives Considered:**", md)
+        self.assertIn("- PostgreSQL: Too heavy", md)
+        self.assertIn("**Outcome:** Adopted", md)
+        self.assertIn("`file`: src/app.py", md)
+        self.assertIn("## Change History (compact)", md)
+        self.assertIn("Use JSON files \u2192 Use SQLite", md)
+        self.assertIn("## Non-Negotiable Constraints", md)
+        self.assertIn("🔴 **[architecture]** Core must remain zero third-party dependencies", md)
+        self.assertIn("## Working State", md)
+        self.assertIn("**Active Task:** Markdown export test", md)
+        self.assertIn("**Blockers:**", md)
+        self.assertIn("- None", md)
+        self.assertIn("Completed: Spec", md)
+        self.assertIn("Remaining: Ship", md)
+        self.assertIn("## Open Questions", md)
+        self.assertIn("- How does markdown render in chat?", md)
+        self.assertIn("## Uncertainty / Missing Information", md)
+        self.assertIn("- CLI color support", md)
+
+    def test_consumer_chat_export_parsing_and_import(self):
+        """Test parsing and importing ChatGPT and Claude conversation exports."""
+        # 1. ChatGPT format
+        chatgpt_data = [
+            {
+                "id": "conv-gpt-1",
+                "title": "GPT Arch Chat",
+                "create_time": 1700000000,
+                "mapping": {
+                    "node-1": {
+                        "message": {
+                            "author": {"role": "user"},
+                            "content": {"parts": ["We decided: use SQLite for local persistence. Rule: must not use cloud databases."]},
+                        }
+                    },
+                    "node-2": {
+                        "message": {
+                            "author": {"role": "assistant"},
+                            "content": {"parts": ["Confirmed. The decision is SQLite."]},
+                        }
+                    },
+                },
+            }
+        ]
+        chatgpt_path = Path(self.test_dir) / "chatgpt_conversations.json"
+        chatgpt_path.write_text(json.dumps(chatgpt_data), encoding="utf-8")
+
+        parsed_gpt = cb.parse_chatgpt_export(str(chatgpt_path))
+        self.assertEqual(len(parsed_gpt), 1)
+        self.assertEqual(parsed_gpt[0]["title"], "GPT Arch Chat")
+        self.assertEqual(len(parsed_gpt[0]["messages"]), 2)
+
+        res_gpt = cb.import_consumer_chat_export(str(chatgpt_path), platform="chatgpt", project_scope=self.scope, agent=self.agent)
+        self.assertIn("decision_ids", res_gpt)
+        self.assertIn("constraint_ids", res_gpt)
+        self.assertTrue(len(res_gpt["decision_ids"]) >= 1 or len(res_gpt["constraint_ids"]) >= 1)
+
+        # 2. Claude format
+        claude_data = [
+            {
+                "uuid": "conv-claude-1",
+                "name": "Claude Design Chat",
+                "created_at": "2026-11-24T00:00:00Z",
+                "chat_messages": [
+                    {"sender": "human", "text": "Mandatory: keep dependencies empty. We decided: use stdlib only."},
+                    {"sender": "assistant", "text": "Understood."},
+                ],
+            }
+        ]
+        claude_path = Path(self.test_dir) / "claude_conversations.json"
+        claude_path.write_text(json.dumps(claude_data), encoding="utf-8")
+
+        parsed_claude = cb.parse_claude_export(str(claude_path))
+        self.assertEqual(len(parsed_claude), 1)
+        self.assertEqual(parsed_claude[0]["title"], "Claude Design Chat")
+        self.assertEqual(len(parsed_claude[0]["messages"]), 2)
+
+        res_claude = cb.import_consumer_chat_export(str(claude_path), platform="claude", project_scope=self.scope, agent=self.agent)
+        self.assertIn("decision_ids", res_claude)
+        self.assertIn("constraint_ids", res_claude)
+        self.assertTrue(len(res_claude["decision_ids"]) >= 1 or len(res_claude["constraint_ids"]) >= 1)
+
+        # 3. Error cases
+        with self.assertRaises(ValueError):
+            cb.parse_chatgpt_export(str(Path(self.test_dir) / "non_existent.json"))
+        with self.assertRaises(ValueError):
+            cb.parse_claude_export(str(Path(self.test_dir) / "non_existent.json"))
+        with self.assertRaises(ValueError):
+            cb.import_consumer_chat_export(str(chatgpt_path), platform="unsupported_platform", project_scope=self.scope, agent=self.agent)
+
     # =========================================================================
     # Security: Malicious Content Filtering
     # =========================================================================
@@ -810,8 +988,14 @@ class TestHandoffstone:
 # Integration Test: MVP Vertical Slice
 # =========================================================================
 
-class TestMVPVerticalSlice:
+class TestMVPVerticalSlice(unittest.TestCase):
     """End-to-end test of the MVP vertical slice."""
+
+    def setUp(self):
+        self.setup_method()
+
+    def tearDown(self):
+        self.teardown_method()
 
     def setup_method(self):
         self.test_dir = tempfile.mkdtemp(prefix="mvp_test_")
@@ -1039,6 +1223,8 @@ def run_all_tests():
         # Persistence
         ("Record persistence", test_suite.test_record_persistence),
         ("Context export/import", test_suite.test_context_export_import),
+        ("Full Markdown fidelity", test_suite.test_to_markdown_full_fidelity),
+        ("Consumer chat export parsing and import", test_suite.test_consumer_chat_export_parsing_and_import),
         # MVP Vertical Slice
         ("MVP Full Flow", mvp_suite.test_full_mvp_flow),
     ]
