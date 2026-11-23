@@ -6,6 +6,7 @@ Current guides:
 - [P0 reliability](P0_RELIABILITY.md) — store errors, secret rejection, and compatibility limits
 - [Cross-client trial protocol](cross-client-trial.md) — how to run a producer → consumer trial
 - [Cross-client trial results](cross-client-trial-results.md) — trials that were actually run
+- [Benchmark fairness and token efficiency](BENCHMARK_FAIRNESS_REVIEW.md) — analysis of the 2k budget curve, token profile, and negative controls
 
 Design and history, not install instructions:
 
