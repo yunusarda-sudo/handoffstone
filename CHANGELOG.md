@@ -7,6 +7,10 @@ and this project follows [PEP 440](https://peps.python.org/pep-0440/) versioning
 
 ## [Unreleased]
 
+## [0.1.0a3] - 2026-11-24
+
+Fourth public alpha. Renames the MCP adapter module for clean PyPI distribution, prioritizes constraints in budget fitting to surpass rival chat summaries at 2k tokens, adds the maintainer playbook and automated triage checklist, and adds the PyPI Trusted Publishing workflow.
+
 ### Changed
 
 - Prioritized constraints before decisions in `_PACKAGE_FIT_PRIORITY` and `fit_package_to_budget`, eliminating constraint starvation under tight token budgets and raising 2k wire format critical fact preservation above the history-aware summary baseline (0.733 vs 0.714).
@@ -15,11 +19,11 @@ and this project follows [PEP 440](https://peps.python.org/pep-0440/) versioning
 
 ### Added
 
+- PyPI Trusted Publishing GitHub Actions workflow (`.github/workflows/publish.yml`) publishing via OIDC on published release.
 - Maintainer playbook and automated triage checklist script (`scripts/maintainer_pr_checklist.py`, `docs/MAINTAINER_PLAYBOOK.md`) for PR reviews, Codex agent triage, and release publishing flow.
-- Contributor Covenant, GitHub issue forms, a pull request template, and a
-  documentation index.
-- Private vulnerability reporting as the security contact. The published
-  maintainer email is the fallback; the GitHub profile has no public email.
+- Benchmark fairness and token efficiency review (`docs/BENCHMARK_FAIRNESS_REVIEW.md`).
+- Contributor Covenant, GitHub issue forms, a pull request template, and a documentation index.
+- Private vulnerability reporting as the security contact. The published maintainer email is the fallback; the GitHub profile has no public email.
 
 ## [0.1.0a2] - 2026-10-24
 
@@ -86,3 +90,4 @@ First public alpha. Portable, stdlib-only context handoffs for AI agents.
 [0.1.0a0]: https://github.com/yunusarda-sudo/handoffstone/releases/tag/v0.1.0a0
 [0.1.0a1]: https://github.com/yunusarda-sudo/handoffstone/releases/tag/v0.1.0a1
 [0.1.0a2]: https://github.com/yunusarda-sudo/handoffstone/releases/tag/v0.1.0a2
+[0.1.0a3]: https://github.com/yunusarda-sudo/handoffstone/releases/tag/v0.1.0a3
