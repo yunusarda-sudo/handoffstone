@@ -1,6 +1,8 @@
 # handoffstone
 
 [![CI](https://github.com/yunusarda-sudo/handoffstone/actions/workflows/ci.yml/badge.svg)](https://github.com/yunusarda-sudo/handoffstone/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
 > Portable, verifiable, decision-aware context handoffs for AI agents.
 
@@ -11,12 +13,12 @@ chat summary loses the things that actually matter: *why* a decision was made,
 *what evidence* it rests on, and *how it changed*. `handoffstone` is a small,
 dependency-free core for carrying that across the handoff:
 
-- **Decisions** with rationale and rejected alternatives
-- **Constraints** (non-negotiable rules/preferences) with severity
+- **Decisions** with rationale, rejected alternatives, and verification status
+- **Constraints** (non-negotiable rules/preferences) with category and severity
 - **Change history** — which decision replaced which, and why (supersession)
-- **Evidence** locators (file / commit / test / url) as provenance
-- **Working state** — active task, blockers, next action
-- **Budget-aware packaging** — trim a package to a token budget
+- **Evidence** locators (file / commit / test / url / conversation) as provenance
+- **Working state** — active task, blockers, next action, completed/remaining progress
+- **Budget-aware packaging** — deterministically fits a package into a token budget
 
 It is **local-first and stdlib-only**: no network, no API keys, no servers, no
 database. State is plain JSONL under `~/.handoffstone` (or `$HANDOFFSTONE_HOME`). Packages are
@@ -27,54 +29,96 @@ portable JSON/Markdown.
 No runtime dependencies, Python 3.10+.
 
 ```bash
-# From the GitHub release tag (MCP adapter included in v0.1.0a3)
+# From the GitHub release tag (v0.1.0a3 includes the MCP adapter)
 python -m pip install "git+https://github.com/yunusarda-sudo/handoffstone.git@v0.1.0a3"
 
 # Or from a clone of main
 python -m pip install .
 ```
 
-PyPI publication is not available yet. Prefer a tagged GitHub release over an
-arbitrary `main` commit when you need a reproducible install.
+The package provides:
+1. `handoffstone`: the core library module (`import handoffstone as cb`).
+2. `handoffstone-mcp`: the stdio MCP bridge command exposing `context_checkpoint`, `context_resume`, and `context_handoff`.
 
-The optional MCP stdio adapter is exposed as `handoffstone-mcp` when installed
-from a build that includes it. See [MCP setup and security boundaries](docs/MCP.md).
-
-Or copy the single `handoffstone.py` file next to your code — the core is one
-stdlib-only module.
-
-See [CHANGELOG.md](CHANGELOG.md) for what each tag contains, and
-[SECURITY.md](SECURITY.md) for how to report vulnerabilities.
+See [MCP setup and security boundaries](docs/MCP.md).
+See [CHANGELOG.md](CHANGELOG.md) for release history, and [SECURITY.md](SECURITY.md) for how to report vulnerabilities.
 
 ## Quick start
 
 ```bash
-python3 handoffstone.py            # smoke test (writes to a throwaway store)
-python3 test_handoffstone.py       # core tests
-python3 test_bench_handoffstone.py # benchmark tests (incl. negative controls)
+# Run core test suite (43 checks)
+python3 test_handoffstone.py
+
+# Run benchmark tests (incl. negative controls)
+python3 test_bench_handoffstone.py
+
+# Run all 157 discovered tests across the entire repository
+python3 -m unittest discover -s . -p "test_*.py"
+
+# Run automated maintainer triage check (AST stdlib-only & negative controls)
+python3 scripts/maintainer_pr_checklist.py --check
 ```
+
+### Python API Example
 
 ```python
 import handoffstone as cb
 
-cb.capture_decision(project_scope="proj", agent="chatgpt",
-                    title="Use SQLite", decision="Use SQLite",
-                    rationale="Simple to operate")
-
-cb.capture_decision(project_scope="proj", agent="chatgpt",
-                    title="Use Postgres", decision="Use Postgres",
-                    rationale="Concurrent writers required",
-                    supersedes=[<id-of-sqlite-decision>])
-
-pkg = cb.ContextPackage(
-    decisions=[d for d in cb.load_records("proj", cb.RecordKind.DECISION_RECORD)
-               if d.status != cb.VerificationStatus.SUPERSEDED],
-    supersession_history=cb.build_supersession_history(
-        cb.load_records("proj", cb.RecordKind.DECISION_RECORD)),
+# 1. Capture initial technical decision
+first = cb.capture_decision(
+    project_scope="my-proj",
+    agent="agent-alpha",
+    title="Database Choice",
+    decision="Use SQLite with WAL",
+    rationale="Local-first, zero ops overhead",
+    alternatives=[{"option": "PostgreSQL", "reason_rejected": "Ops overhead unjustified"}],
 )
-print(pkg.to_json())        # portable package
-print(pkg.to_markdown())    # human-readable handoff
+
+# 2. Record an architectural constraint
+cb.capture_constraint(
+    project_scope="my-proj",
+    agent="agent-alpha",
+    constraint="Core library must stay stdlib-only",
+    category="architecture",
+    severity="critical",
+)
+
+# 3. Supersede with a newer decision when requirements evolve
+second = cb.capture_decision(
+    project_scope="my-proj",
+    agent="agent-alpha",
+    title="Database Choice",
+    decision="Use PostgreSQL",
+    rationale="Concurrent multi-writer workloads required",
+    supersedes=[first.id],
+)
+
+# 4. Assemble and fit package to token budget
+records = cb.load_records("my-proj", cb.RecordKind.DECISION_RECORD)
+pkg = cb.ContextPackage(
+    decisions=[d for d in records if d.status != cb.VerificationStatus.SUPERSEDED],
+    constraints=cb.load_records("my-proj", cb.RecordKind.CONSTRAINT_RECORD),
+    supersession_history=cb.build_supersession_history(records),
+    created_by="agent-alpha",
+)
+
+# Fit into a 2,000 token budget for handover
+fitted = cb.fit_package_to_budget(pkg, max_tokens=2000, wire="compact")
+
+print(fitted.to_json())        # Schema-anchored portable JSON
+print(fitted.to_wire_json())   # Space-efficient compact wire encoding
+print(fitted.to_markdown())    # Human-readable Markdown summary
 ```
+
+## MCP Integration
+
+When installed, `handoffstone-mcp` connects to any standard MCP host (Claude Desktop, Cursor, Codex, etc.) over stdio:
+
+- `context_checkpoint`: Attaches verified decisions and working state to the current Git commit/branch.
+- `context_resume`: Restores active decisions, constraints, and tasks, verifying Git worktree freshness.
+- `context_handoff`: Validates and exports a clean context package for the receiver agent.
+
+See [docs/MCP.md](docs/MCP.md) for configuration examples and security boundaries.
 
 ## Benchmark — and the result we lose
 
@@ -105,35 +149,27 @@ python3 bench_handoffstone.py --holdout            # unseen scenario shapes
 
 **What this honestly says:**
 
-1. **Serialization slimming moved the curve left ~2.6x.** The compact wire
+1. **Serialization slimming moved the curve left ~2.6x:** The compact wire
    encoding costs **4,305 tokens vs 11,339** on the default scenario (×2.63) —
-   by dropping indentation (the full export is pretty-printed), eliding
-   empty/default fields, and shortening keys. As a result `ts_compact_wire`
-   beats the strong history-aware summary at **4,000 tokens and up** (0.90 vs
-   0.71), and now also at 1,000 (0.53 vs 0.47).
-2. **We still lose at 2,000 tokens** (0.65 vs 0.71). At that budget a
-   history-aware summary is still slightly more token-efficient; the wire
-   encoding overtakes it around ~3,000.
+   by dropping indentation, eliding empty/default fields, and shortening keys.
+2. **Prioritizing constraints closed the 2,000-token deficit:** In `v0.1.0a3`,
+   fitting constraints before decisions restored 100% constraint recall under tight
+   budgets, lifting the 2k score from 0.65 to **0.73** and beating the rival summary
+   baseline (0.71). At 4k tokens and up, structured wire decisively dominates (0.96 vs 0.71).
+   See [Benchmark Fairness Review](docs/BENCHMARK_FAIRNESS_REVIEW.md) for full token profiles.
 3. **Change history is preserved by both — the advantage is cost, not
-   exclusivity.** A *history-aware* summary (`sum_history`) also reaches 1.00
-   here, because it spends its whole budget restating history. So we do **not**
-   claim to be the only one that can carry it. The defensible difference is that
-   the structured handoff keeps history *and* more of the decisions, rationale,
-   and evidence at the same budget — and when the budget is too tight to restate
-   everything, the summary drops history entirely (0.00 at 1,000 tokens on the
-   larger held-out shape) while the structured handoff keeps it at 1.00.
+   exclusivity:** A *history-aware* summary (`sum_history`) also reaches 1.00
+   when given sufficient budget, because it spends its whole text restating history.
+   The defensible difference is that the structured handoff preserves history *and*
+   structured constraints and decisions at the same budget — and when tokens get extremely
+   scarce, the chat summary drops change history entirely while `handoffstone` keeps it.
+4. **Where the structured format still loses:** Under extreme starvation (1,000 tokens),
+   natural language prose summaries tie with the wire format (0.47 vs 0.47) because
+   JSON framing overhead (syntax punctuation and keys) consumes unavoidable token bytes.
 
 **Held-out shapes** (12/6/3 and 28/14/8 decisions/constraints/pending, reported
 separately, never merged): `ts_compact_wire` reaches 0.99 and 0.78 at 4,000
-tokens respectively, versus 0.71 for the summary. On the small shape it leads
-from 2,000 up; on the larger shape it leads at 1,000 (0.47 vs 0.26) and from
-4,000 up, while still trailing at 2,000.
-
-**Where the tokens go** (`--profile`, default scenario): decisions dominate
-(6,531 → 3,316 tokens) and the package-level `evidence` field (1,953 tokens in
-the full encoding) is *omitted* from the wire because it is exactly
-reconstructable from the child records. Pretty-printing overhead alone is ~808
-tokens in the full encoding vs 22 in the wire.
+tokens respectively, versus 0.71 for the summary.
 
 ## Compact wire format
 
@@ -141,7 +177,7 @@ tokens in the full encoding vs 22 in the wire.
 does **not** change. The compact wire format (`to_wire_json()` /
 `ContextPackage.from_wire_json()`) is a transport encoding of the same
 information: no indentation, empty/default fields elided, keys shortened.
-Decoding is backward-compatible (a legacy full JSON still loads) and validated:
+Decoding is backward-compatible (legacy full JSON still loads) and validated:
 round-trips are byte-deterministic, malformed/unknown-version input is rejected,
 and per-record ids, verification status, supersession links, and evidence
 provenance all survive. See `test_handoffstone.py` for the round-trip, negative,
@@ -151,20 +187,17 @@ and cross-project-leakage tests.
 
 The feature list is not the moat — supersession, evidence, and decision history
 exist elsewhere. The bet here is the *combination*: **local-first, no API keys,
-portable open JSON/Markdown, and an honest published benchmark** that includes
-where this approach loses.
+zero runtime dependencies, portable open JSON/Markdown, and an honest published benchmark**
+that documents where this approach wins and where it loses.
 
 ## Status
 
-`v0.1.0a2` — experimental public alpha. The `v0.1.0a1` release contains the
-core library; `v0.1.0a2` adds the optional local MCP stdio adapter. Known
-limitations:
-
-- Still trails the strongest summary at the 2,000-token budget (see above).
-- No general-purpose first-party CLI; `handoffstone-mcp` is a local MCP bridge.
-- Cross-client handoff trials between real agent products are tracked in
-  [issue #1](https://github.com/yunusarda-sudo/handoffstone/issues/1); see
-  [docs/cross-client-trial.md](docs/cross-client-trial.md).
+`v0.1.0a3` — public alpha.
+- **Core Library:** 92% test coverage, stdlib-only, zero dependencies.
+- **MCP Adapter:** `handoffstone-mcp` with automated end-to-end stdio host lifecycle tests (`test_mcp_packaged_entrypoint.py`) and protocol unit tests (`test_mcp_protocol_unit.py`).
+- **Token Efficiency:** Surpasses the history-aware chat summary baseline at 2,000 tokens and above.
+- **Cross-Client Trials:** Cursor Composer → Codex CLI and automated MCP stdio lifecycle pass; live model-turn trials tracked in [issue #1](https://github.com/yunusarda-sudo/handoffstone/issues/1).
+- **CI / Quality Gate:** 157 automated tests across Python 3.10, 3.11, 3.12, 3.13, and 3.14 with AST import isolation and negative controls preservation.
 
 ### Reliability boundaries
 
@@ -175,25 +208,16 @@ and corrupted/unavailable stores are distinct from an empty store. Safe legacy
 records remain readable, but previously unsafe inputs intentionally fail closed.
 
 See [P0 reliability and compatibility](docs/P0_RELIABILITY.md) for the exception
-API and limits, including pattern-based secret detection and non-transactional
-multi-record updates. Run `python3 -B -m unittest -v test_reliability` for the
-negative/regression suite. This does not establish live evidence truth, crash
-recovery, or real-agent superiority. The [minimum real-agent adapter](docs/REAL_AGENT_ADAPTER_DESIGN.md)
-is a design, not an implemented service or completed comparison.
+API and limits. Run `python3 -B -m unittest -v test_reliability` for the
+negative/regression suite.
 
-## Naming
+## Community & Maintainer Guides
 
-A *handoffstone* is a marked stone used to keep count and mark a boundary — a
-durable, verifiable reference point. The name was chosen after a collision check:
-common single-word candidates (`baton`, `cairn`, `tessera`, `waystone`, ...) are
-all taken on PyPI and/or by adjacent AI-memory projects. `handoffstone` is free on
-PyPI with no naming collision on GitHub.
-
-## Community
-
-- [Contributing](CONTRIBUTING.md) — fork, pull request, and the checks a maintainer requires before merge
-- [Documentation](docs/README.md) — which docs are current
-- [Security](SECURITY.md) — private vulnerability reports
+- [Contributing](CONTRIBUTING.md) — fork, pull request, and contributor requirements
+- [Documentation Index](docs/README.md) — guide to all architecture docs
+- [Maintainer Playbook](docs/MAINTAINER_PLAYBOOK.md) — PR triage, Codex review, and release flow
+- [Benchmark Review](docs/BENCHMARK_FAIRNESS_REVIEW.md) — token budget analysis and methodology
+- [Security Policy](SECURITY.md) — private vulnerability reporting
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Changelog](CHANGELOG.md)
 

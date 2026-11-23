@@ -7,6 +7,10 @@ and this project follows [PEP 440](https://peps.python.org/pep-0440/) versioning
 
 ## [Unreleased]
 
+### Changed
+
+- Refreshed `README.md` documentation: updated status to v0.1.0a3, detailed the 2k token deficit resolution via constraint prioritization, added Python API lifecycle examples, expanded MCP integration documentation, and linked maintainer playbook and benchmark fairness reviews.
+
 ### Added
 
 - In-process MCP protocol unit test suite (`test_mcp_protocol_unit.py`) testing JSON-RPC method routing (`ping`, `initialize`, `tools/list`, `tools/call`), project scope validation, parameter validation, tool faults, and memory boundary guards, raising `handoffstone_mcp.py` coverage to 62% and total repo coverage to 82%.
