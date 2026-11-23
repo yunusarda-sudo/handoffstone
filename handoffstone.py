@@ -1138,8 +1138,8 @@ _PACKAGE_FIT_PRIORITY = (
     "project_context",
     "working_state",
     "supersession_history",
-    "decisions",
     "constraints",
+    "decisions",
     "evidence",
     "open_questions",
     "uncertainty",
@@ -1175,8 +1175,8 @@ def fit_package_to_budget(package: "ContextPackage", max_tokens: int,
 
     ops: list[tuple[str, Any]] = []
     ops += [("supersession_history", s) for s in package.supersession_history]
-    ops += [("decisions", d) for d in package.decisions]
     ops += [("constraints", c) for c in package.constraints]
+    ops += [("decisions", d) for d in package.decisions]
     ops += [("evidence", e) for e in package.evidence]
     ops += [("open_questions", q) for q in package.open_questions]
     ops += [("uncertainty", u) for u in package.uncertainty]
