@@ -9,6 +9,7 @@ and this project follows [PEP 440](https://peps.python.org/pep-0440/) versioning
 
 ### Changed
 
+- Prioritized constraints before decisions in `_PACKAGE_FIT_PRIORITY` and `fit_package_to_budget`, eliminating constraint starvation under tight token budgets and raising 2k wire format critical fact preservation above the history-aware summary baseline (0.733 vs 0.714).
 - Renamed the top-level MCP adapter module from generic `mcp_stdio` to namespaced `handoffstone_mcp` to prevent namespace collisions upon PyPI installation, while preserving the packaged `handoffstone-mcp` CLI entrypoint.
 - Outside contributions enter through forks and pull requests. `main` requires a pull request and green CI on Python 3.10–3.14 before it can move, including for maintainers.
 
