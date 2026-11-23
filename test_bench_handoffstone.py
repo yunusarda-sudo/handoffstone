@@ -15,11 +15,15 @@ negative-control tests would fail.
 """
 
 import json
+import unittest
 
 import bench_handoffstone as B
 
 
-class TestBench:
+class TestBench(unittest.TestCase):
+    def setUp(self):
+        self.setup_method()
+
     def setup_method(self):
         self.scenario = B.generate_scenario(seed=42, n_decisions=20, n_constraints=10, n_pending=5)
         self.records = B.build_records(self.scenario)
