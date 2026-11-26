@@ -112,11 +112,24 @@ print(fitted.to_markdown())    # Human-readable Markdown summary
 
 ## MCP Integration
 
-When installed, `handoffstone-mcp` connects to any standard MCP host (Claude Desktop, Cursor, Codex, etc.) over stdio:
+When installed, `handoffstone-mcp` connects to any standard MCP host (Claude Desktop, Cursor, Codex, Antigravity) over stdio:
+
+```json
+{
+  "mcpServers": {
+    "handoffstone": {
+      "command": "handoffstone-mcp"
+    }
+  }
+}
+```
+
+Key tools exposed:
 
 - `context_checkpoint`: Attaches verified decisions and working state to the current Git commit/branch.
 - `context_resume`: Restores active decisions, constraints, and tasks, verifying Git worktree freshness.
 - `context_handoff`: Validates and exports a clean context package for the receiver agent.
+
 
 See [docs/MCP.md](docs/MCP.md) for configuration examples and security boundaries.
 
